@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  kernel-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: drupal
+          MYSQL_USER: drupal
+          MYSQL_PASSWORD: drupal
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, gd, xml, curl
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Set up phpunit.xml
+        run: |
+          cp web/core/phpunit.xml.dist web/core/phpunit.xml
+          sed -i 's|<env name="SIMPLETEST_BASE_URL" value=""/>|<env name="SIMPLETEST_BASE_URL" value="http://localhost"/>|' web/core/phpunit.xml
+          sed -i 's|<env name="SIMPLETEST_DB" value=""/>|<env name="SIMPLETEST_DB" value="mysql://drupal:drupal@127.0.0.1/drupal"/>|' web/core/phpunit.xml
+
+      - name: Run kernel tests
+        run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/ --testdox
