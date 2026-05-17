@@ -49,6 +49,10 @@ class Booking extends ContentEntityBase {
       ->setLabel(new TranslatableMarkup('Appointment date'))
       ->setRequired(TRUE);
 
+    $fields['service'] = BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Service'))
+      ->setSetting('max_length', 255);
+
     $fields['notes'] = BaseFieldDefinition::create('string_long')
       ->setLabel(new TranslatableMarkup('Notes'));
 
