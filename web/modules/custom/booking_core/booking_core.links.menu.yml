@@ -1,0 +1,13 @@
+booking_core.admin_list:
+  title: 'Bookings'
+  description: 'Manage bookings.'
+  route_name: booking_core.admin_list
+  parent: system.admin
+  weight: 10
+
+booking_core.settings:
+  title: 'Booking Settings'
+  description: 'Configure the booking module.'
+  route_name: booking_core.settings
+  parent: system.admin_config
+  weight: 10

@@ -1,0 +1,4 @@
+administer bookings:
+  title: 'Administer bookings'
+  description: 'View, manage, and delete bookings.'
+  restrict access: true

@@ -1,0 +1,32 @@
+<?php
+
+use Drupal\Core\Render\Markup;
+
+/**
+ * Implements hook_mail().
+ */
+function booking_core_mail(string $key, array &$message, array $params): void {
+  $config = \Drupal::config('booking_core.settings');
+  $company = $config->get('company_name') ?: 'Us';
+
+  switch ($key) {
+    case 'confirmation':
+      $message['subject'] = t('Your booking is confirmed');
+      $message['body'][]  = t('Hi @name,', ['@name' => $params['name']]);
+      $message['body'][]  = t('Your appointment on @date has been received. We will be in touch shortly.', ['@date' => $params['date']]);
+      $message['body'][]  = t('Thank you, @company', ['@company' => $company]);
+      break;
+
+    case 'notification':
+      $message['subject'] = t('New booking received');
+      $message['body'][]  = t('A new booking has been submitted:');
+      $message['body'][]  = Markup::create(
+        '<strong>Name:</strong> ' . htmlspecialchars($params['name']) . '<br>' .
+        '<strong>Email:</strong> ' . htmlspecialchars($params['email']) . '<br>' .
+        '<strong>Phone:</strong> ' . htmlspecialchars($params['phone']) . '<br>' .
+        '<strong>Date:</strong> ' . htmlspecialchars($params['date']) . '<br>' .
+        '<strong>Notes:</strong> ' . htmlspecialchars($params['notes'])
+      );
+      break;
+  }
+}

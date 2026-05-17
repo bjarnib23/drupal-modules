@@ -1,0 +1,47 @@
+booking_core.book:
+  path: '/book-appointment'
+  defaults:
+    _form: '\Drupal\booking_core\Form\BookingForm'
+    _title: 'Book an Appointment'
+  requirements:
+    _access: 'TRUE'
+
+booking_core.thank_you:
+  path: '/book-appointment/thank-you'
+  defaults:
+    _controller: '\Drupal\booking_core\Controller\BookingController::thankYou'
+    _title: 'Booking Confirmed'
+  requirements:
+    _access: 'TRUE'
+
+booking_core.admin_list:
+  path: '/admin/bookings'
+  defaults:
+    _controller: '\Drupal\booking_core\Controller\BookingController::adminList'
+    _title: 'Bookings'
+  requirements:
+    _permission: 'administer bookings'
+
+booking_core.admin_view:
+  path: '/admin/bookings/{booking}'
+  defaults:
+    _controller: '\Drupal\booking_core\Controller\BookingController::adminView'
+    _title: 'View Booking'
+  requirements:
+    _permission: 'administer bookings'
+
+booking_core.admin_delete:
+  path: '/admin/bookings/{booking}/delete'
+  defaults:
+    _form: '\Drupal\booking_core\Form\BookingDeleteForm'
+    _title: 'Delete Booking'
+  requirements:
+    _permission: 'administer bookings'
+
+booking_core.settings:
+  path: '/admin/config/booking-core/settings'
+  defaults:
+    _form: '\Drupal\booking_core\Form\BookingSettingsForm'
+    _title: 'Booking Settings'
+  requirements:
+    _permission: 'administer site configuration'
