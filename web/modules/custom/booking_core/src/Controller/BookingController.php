@@ -4,7 +4,6 @@ namespace Drupal\booking_core\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DrupalDateTime;
-use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\booking_core\Entity\Booking;
 
@@ -69,22 +68,14 @@ class BookingController extends ControllerBase {
   }
 
   public function adminView(Booking $booking): array {
-    $fields = [
-      $this->t('Name')    => $booking->get('name')->value,
-      $this->t('Email')   => $booking->get('email')->value,
-      $this->t('Phone')   => $booking->get('phone')->value ?: '—',
-      $this->t('Service') => $booking->get('service')->value ?: '—',
-      $this->t('Date')    => $this->formatDate($booking->get('date')->value),
-      $this->t('Notes')   => $booking->get('notes')->value ?: '—',
+    $rows = [
+      [['data' => $this->t('Name'),    'header' => TRUE], $booking->get('name')->value],
+      [['data' => $this->t('Email'),   'header' => TRUE], $booking->get('email')->value],
+      [['data' => $this->t('Phone'),   'header' => TRUE], $booking->get('phone')->value ?: '—'],
+      [['data' => $this->t('Service'), 'header' => TRUE], $booking->get('service')->value ?: '—'],
+      [['data' => $this->t('Date'),    'header' => TRUE], $this->formatDate($booking->get('date')->value)],
+      [['data' => $this->t('Notes'),   'header' => TRUE], $booking->get('notes')->value ?: '—'],
     ];
-
-    $rows = [];
-    foreach ($fields as $label => $value) {
-      $rows[] = [
-        ['data' => $label, 'header' => TRUE],
-        $value,
-      ];
-    }
 
     return [
       'details' => [
@@ -93,15 +84,20 @@ class BookingController extends ControllerBase {
         '#caption' => $this->t('Booking details'),
       ],
       'actions' => [
-        '#type'  => 'container',
-        'back'   => Link::fromTextAndUrl(
-          $this->t('← All bookings'),
-          Url::fromRoute('booking_core.admin_list')
-        )->toRenderable(),
-        'delete' => Link::fromTextAndUrl(
-          $this->t('Delete booking'),
-          Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()])
-        )->toRenderable(),
+        '#type' => 'container',
+        'back' => [
+          '#type'       => 'link',
+          '#title'      => $this->t('← All bookings'),
+          '#url'        => Url::fromRoute('booking_core.admin_list'),
+          '#attributes' => ['class' => ['button']],
+          '#suffix'     => ' ',
+        ],
+        'delete' => [
+          '#type'       => 'link',
+          '#title'      => $this->t('Delete booking'),
+          '#url'        => Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()]),
+          '#attributes' => ['class' => ['button', 'button--danger']],
+        ],
       ],
     ];
   }
