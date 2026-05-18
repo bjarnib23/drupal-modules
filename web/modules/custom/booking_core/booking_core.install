@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Install, update, and uninstall functions for the Booking Core module.
+ */
+
+/**
  * Add service field to the booking entity.
  */
 function booking_core_update_10001(): void {

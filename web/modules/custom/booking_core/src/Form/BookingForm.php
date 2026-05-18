@@ -8,11 +8,15 @@ use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Lock\LockBackendInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Mail\MailManagerInterface;
 use Drupal\Core\Url;
 use Drupal\booking_core\BookingSlotService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * Multi-step booking form with AJAX time slot selection.
+ */
 class BookingForm extends FormBase {
 
   protected EntityTypeManagerInterface $entityTypeManager;
@@ -20,6 +24,7 @@ class BookingForm extends FormBase {
   protected LockBackendInterface $lock;
   protected FloodInterface $flood;
   protected BookingSlotService $slotService;
+  protected $logger;
 
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -28,13 +33,15 @@ class BookingForm extends FormBase {
     LockBackendInterface $lock,
     FloodInterface $flood,
     BookingSlotService $slot_service,
+    LoggerChannelFactoryInterface $logger_factory,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->mailManager       = $mail_manager;
-    $this->configFactory     = $config_factory;
+    $this->setConfigFactory($config_factory);
     $this->lock              = $lock;
     $this->flood             = $flood;
     $this->slotService       = $slot_service;
+    $this->logger            = $logger_factory->get('booking_core');
   }
 
   public static function create(ContainerInterface $container): static {
@@ -45,6 +52,7 @@ class BookingForm extends FormBase {
       $container->get('lock'),
       $container->get('flood'),
       $container->get('booking_core.slot_service'),
+      $container->get('logger.factory'),
     );
   }
 
@@ -53,7 +61,7 @@ class BookingForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    $config   = $this->configFactory->get('booking_core.settings');
+    $config   = $this->configFactory()->get('booking_core.settings');
     $services = $config->get('services') ?? [];
     $options  = array_combine($services, $services);
 
@@ -90,11 +98,11 @@ class BookingForm extends FormBase {
       '#required'   => TRUE,
       '#attributes' => ['min' => date('Y-m-d', strtotime('+1 day'))],
       '#ajax'       => [
-        'callback'            => '::updateTimeSlots',
-        'wrapper'             => 'time-wrapper',
-        'event'               => 'change',
-        'progress'            => ['type' => 'throbber', 'message' => NULL],
-        'disable_refocus'     => TRUE,
+        'callback'        => '::updateTimeSlots',
+        'wrapper'         => 'time-wrapper',
+        'event'           => 'change',
+        'progress'        => ['type' => 'throbber', 'message' => NULL],
+        'disable_refocus' => TRUE,
       ],
     ];
 
@@ -154,6 +162,9 @@ class BookingForm extends FormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
+    $ip = $this->getRequest()->getClientIp();
+    $this->flood->register('booking_core_submit', 3600, $ip);
+
     $date     = $form_state->getValue('date');
     $time     = $form_state->getValue('time');
     $iso      = $date . 'T' . $time . ':00';
@@ -186,15 +197,15 @@ class BookingForm extends FormBase {
     catch (\Exception $e) {
       $this->lock->release($lock_key);
       $this->messenger()->addError($this->t('Could not save your booking. Please try again.'));
-      \Drupal::logger('booking_core')->error('Booking save failed: @msg', ['@msg' => $e->getMessage()]);
+      $this->logger->error('Booking save failed: @msg', ['@msg' => $e->getMessage()]);
       return;
     }
 
     $this->lock->release($lock_key);
 
-    $config      = $this->configFactory->get('booking_core.settings');
-    $langcode    = $this->configFactory->get('system.site')->get('langcode');
-    $params      = [
+    $config   = $this->configFactory()->get('booking_core.settings');
+    $langcode = $this->configFactory()->get('system.site')->get('langcode');
+    $params   = [
       'name'    => $form_state->getValue('name'),
       'date'    => $iso,
       'email'   => $form_state->getValue('email'),
@@ -205,10 +216,8 @@ class BookingForm extends FormBase {
 
     $this->mailManager->mail('booking_core', 'confirmation', $form_state->getValue('email'), $langcode, $params);
 
-    $admin_email = $config->get('admin_email') ?: $this->configFactory->get('system.site')->get('mail');
+    $admin_email = $config->get('admin_email') ?: $this->configFactory()->get('system.site')->get('mail');
     $this->mailManager->mail('booking_core', 'notification', $admin_email, $langcode, $params);
-
-    $this->flood->register('booking_core_submit', 3600, $this->getRequest()->getClientIp());
 
     $form_state->setRedirectUrl(Url::fromRoute('booking_core.thank_you'));
   }

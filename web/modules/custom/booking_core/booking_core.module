@@ -1,12 +1,20 @@
 <?php
 
 /**
+ * @file
+ * Hooks and procedural code for the Booking Core module.
+ */
+
+/**
  * Implements hook_mail().
  */
 function booking_core_mail(string $key, array &$message, array $params): void {
-  $config   = \Drupal::config('booking_core.settings');
-  $company  = $config->get('company_name') ?: 'Us';
-  $date_fmt = date('l j F Y \a\t H:i', strtotime($params['date']));
+  $config    = \Drupal::config('booking_core.settings');
+  $company   = $config->get('company_name') ?: 'Us';
+  $site_tz   = \Drupal::config('system.date')->get('timezone.default') ?: 'UTC';
+  $dt        = new \Drupal\Core\Datetime\DrupalDateTime($params['date'], 'UTC');
+  $dt->setTimezone(new \DateTimeZone($site_tz));
+  $date_fmt  = $dt->format('l j F Y \a\t H:i');
 
   switch ($key) {
     case 'confirmation':
