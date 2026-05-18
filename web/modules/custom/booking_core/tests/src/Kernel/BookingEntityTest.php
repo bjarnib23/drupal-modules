@@ -23,11 +23,12 @@ class BookingEntityTest extends EntityKernelTestBase {
 
   public function testBookingCanBeCreatedAndLoaded(): void {
     $booking = Booking::create([
-      'name'  => 'Jane Doe',
-      'email' => 'jane@example.com',
-      'phone' => '555-1234',
-      'date'  => '2026-06-01T10:00:00',
-      'notes' => 'Please confirm by email.',
+      'name'    => 'Jane Doe',
+      'email'   => 'jane@example.com',
+      'phone'   => '555-1234',
+      'service' => 'Haircut',
+      'date'    => '2026-06-01T10:00:00',
+      'notes'   => 'Please confirm by email.',
     ]);
 
     $this->assertSame(SAVED_NEW, $booking->save());
@@ -36,6 +37,7 @@ class BookingEntityTest extends EntityKernelTestBase {
     $loaded = Booking::load($booking->id());
     $this->assertSame('Jane Doe', $loaded->get('name')->value);
     $this->assertSame('jane@example.com', $loaded->get('email')->value);
+    $this->assertSame('Haircut', $loaded->get('service')->value);
     $this->assertSame('2026-06-01T10:00:00', $loaded->get('date')->value);
   }
 

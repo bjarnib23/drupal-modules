@@ -39,11 +39,14 @@ class BookingForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
+    $services = $this->configFactory->get('booking_core.settings')->get('services') ?? [];
+    $options  = array_combine($services, $services);
+
     $form['name'] = [
-      '#type'        => 'textfield',
-      '#title'       => $this->t('Full name'),
-      '#required'    => TRUE,
-      '#maxlength'   => 255,
+      '#type'      => 'textfield',
+      '#title'     => $this->t('Full name'),
+      '#required'  => TRUE,
+      '#maxlength' => 255,
     ];
 
     $form['email'] = [
@@ -56,6 +59,14 @@ class BookingForm extends FormBase {
       '#type'      => 'tel',
       '#title'     => $this->t('Phone number'),
       '#maxlength' => 50,
+    ];
+
+    $form['service'] = [
+      '#type'         => 'select',
+      '#title'        => $this->t('Service'),
+      '#options'      => $options,
+      '#required'     => TRUE,
+      '#empty_option' => $this->t('- Select a service -'),
     ];
 
     $form['date'] = [
@@ -103,11 +114,12 @@ class BookingForm extends FormBase {
 
     try {
       $booking = $this->entityTypeManager->getStorage('booking')->create([
-        'name'  => $form_state->getValue('name'),
-        'email' => $form_state->getValue('email'),
-        'phone' => $form_state->getValue('phone') ?? '',
-        'date'  => $iso,
-        'notes' => $form_state->getValue('notes') ?? '',
+        'name'    => $form_state->getValue('name'),
+        'email'   => $form_state->getValue('email'),
+        'phone'   => $form_state->getValue('phone') ?? '',
+        'service' => $form_state->getValue('service') ?? '',
+        'date'    => $iso,
+        'notes'   => $form_state->getValue('notes') ?? '',
       ]);
       $booking->save();
     }
@@ -123,11 +135,12 @@ class BookingForm extends FormBase {
     $config   = $this->configFactory->get('booking_core.settings');
     $langcode = $this->configFactory->get('system.site')->get('langcode');
     $params   = [
-      'name'  => $form_state->getValue('name'),
-      'date'  => $iso,
-      'email' => $form_state->getValue('email'),
-      'phone' => $form_state->getValue('phone') ?? '',
-      'notes' => $form_state->getValue('notes') ?? '',
+      'name'    => $form_state->getValue('name'),
+      'date'    => $iso,
+      'email'   => $form_state->getValue('email'),
+      'phone'   => $form_state->getValue('phone') ?? '',
+      'service' => $form_state->getValue('service') ?? '',
+      'notes'   => $form_state->getValue('notes') ?? '',
     ];
 
     $this->mailManager->mail('booking_core', 'confirmation', $form_state->getValue('email'), $langcode, $params);

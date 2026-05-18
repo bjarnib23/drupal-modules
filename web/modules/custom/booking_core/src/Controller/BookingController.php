@@ -67,23 +67,36 @@ class BookingController extends ControllerBase {
     $date      = $booking->get('date')->value ?? '';
     $formatted = $date ? date('D d M Y \a\t H:i', strtotime($date)) : '—';
 
-    $rows = [
-      [$this->t('Name'),  $booking->get('name')->value],
-      [$this->t('Email'), $booking->get('email')->value],
-      [$this->t('Phone'), $booking->get('phone')->value],
-      [$this->t('Date'),  $formatted],
-      [$this->t('Notes'), $booking->get('notes')->value],
+    $fields = [
+      'Name'    => $booking->get('name')->value,
+      'Email'   => $booking->get('email')->value,
+      'Phone'   => $booking->get('phone')->value ?: '—',
+      'Service' => $booking->get('service')->value ?: '—',
+      'Date'    => $formatted,
+      'Notes'   => $booking->get('notes')->value ?: '—',
     ];
 
+    $rows = '';
+    foreach ($fields as $label => $value) {
+      $rows .= '<div style="display:flex;padding:12px 0;border-bottom:1px solid #e5e7eb;">'
+        . '<div style="width:160px;font-weight:600;color:#374151;">' . htmlspecialchars($label) . '</div>'
+        . '<div style="flex:1;color:#111827;">' . htmlspecialchars($value) . '</div>'
+        . '</div>';
+    }
+
+    $delete_url  = Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()])->toString();
+    $list_url    = Url::fromRoute('booking_core.admin_list')->toString();
+
     return [
-      'table' => [
-        '#type'   => 'table',
-        '#header' => [$this->t('Field'), $this->t('Value')],
-        '#rows'   => $rows,
-      ],
-      'back' => [
-        '#markup' => Link::fromTextAndUrl('← Back to all bookings', Url::fromRoute('booking_core.admin_list'))->toString(),
-      ],
+      '#markup' => Markup::create(
+        '<div style="max-width:680px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:28px 32px;margin-top:16px;">'
+        . '<div style="margin-bottom:20px;">' . $rows . '</div>'
+        . '<div style="display:flex;gap:12px;margin-top:24px;">'
+        . '<a href="' . $list_url . '" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:6px;text-decoration:none;color:#374151;font-size:14px;">← All bookings</a>'
+        . '<a href="' . $delete_url . '" style="padding:8px 16px;background:#dc2626;border-radius:6px;text-decoration:none;color:#fff;font-size:14px;">Delete booking</a>'
+        . '</div>'
+        . '</div>'
+      ),
     ];
   }
 

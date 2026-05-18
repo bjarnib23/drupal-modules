@@ -21,11 +21,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
     'uuid' => 'uuid',
     'label' => 'name',
   ],
-  links: [
-    'canonical' => '/admin/bookings/{booking}',
-    'delete-form' => '/admin/bookings/{booking}/delete',
-    'collection' => '/admin/bookings',
-  ],
 )]
 class Booking extends ContentEntityBase {
 
