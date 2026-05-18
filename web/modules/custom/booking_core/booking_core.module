@@ -1,33 +1,39 @@
 <?php
 
-use Drupal\Core\Render\Markup;
-
 /**
  * Implements hook_mail().
  */
 function booking_core_mail(string $key, array &$message, array $params): void {
-  $config = \Drupal::config('booking_core.settings');
-  $company = $config->get('company_name') ?: 'Us';
+  $config   = \Drupal::config('booking_core.settings');
+  $company  = $config->get('company_name') ?: 'Us';
+  $date_fmt = date('l j F Y \a\t H:i', strtotime($params['date']));
 
   switch ($key) {
     case 'confirmation':
-      $message['subject'] = t('Your booking is confirmed');
+      $message['subject'] = t('Booking confirmed — @date', ['@date' => $date_fmt]);
       $message['body'][]  = t('Hi @name,', ['@name' => $params['name']]);
-      $message['body'][]  = t('Your appointment on @date has been received. We will be in touch shortly.', ['@date' => $params['date']]);
-      $message['body'][]  = t('Thank you, @company', ['@company' => $company]);
+      $message['body'][]  = t('Your booking is confirmed:');
+      $message['body'][]  = t('Service: @service', ['@service' => $params['service']]);
+      $message['body'][]  = t('Date & time: @date', ['@date' => $date_fmt]);
+      if (!empty($params['notes'])) {
+        $message['body'][] = t('Notes: @notes', ['@notes' => $params['notes']]);
+      }
+      $message['body'][] = t('If you need to make any changes, please contact us directly.');
+      $message['body'][] = t('Thank you,') . "\n" . $company;
       break;
 
     case 'notification':
-      $message['subject'] = t('New booking received');
-      $message['body'][]  = t('A new booking has been submitted:');
-      $message['body'][]  = Markup::create(
-        '<strong>Name:</strong> ' . htmlspecialchars($params['name']) . '<br>' .
-        '<strong>Email:</strong> ' . htmlspecialchars($params['email']) . '<br>' .
-        '<strong>Phone:</strong> ' . htmlspecialchars($params['phone']) . '<br>' .
-        '<strong>Service:</strong> ' . htmlspecialchars($params['service']) . '<br>' .
-        '<strong>Date:</strong> ' . htmlspecialchars($params['date']) . '<br>' .
-        '<strong>Notes:</strong> ' . htmlspecialchars($params['notes'])
-      );
+      $message['subject'] = t('New booking — @name (@service)', [
+        '@name'    => $params['name'],
+        '@service' => $params['service'],
+      ]);
+      $message['body'][] = t('A new booking has been submitted:');
+      $message['body'][] = t('Name: @v',    ['@v' => $params['name']]);
+      $message['body'][] = t('Email: @v',   ['@v' => $params['email']]);
+      $message['body'][] = t('Phone: @v',   ['@v' => $params['phone'] ?: '—']);
+      $message['body'][] = t('Service: @v', ['@v' => $params['service']]);
+      $message['body'][] = t('Date: @v',    ['@v' => $date_fmt]);
+      $message['body'][] = t('Notes: @v',   ['@v' => $params['notes'] ?: '—']);
       break;
   }
 }
