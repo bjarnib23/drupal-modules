@@ -41,5 +41,8 @@ jobs:
           sed -i 's|<env name="SIMPLETEST_BASE_URL" value=""/>|<env name="SIMPLETEST_BASE_URL" value="http://localhost"/>|' web/core/phpunit.xml
           sed -i 's|<env name="SIMPLETEST_DB" value=""/>|<env name="SIMPLETEST_DB" value="mysql://drupal:drupal@127.0.0.1/drupal"/>|' web/core/phpunit.xml
 
+      - name: Run unit tests
+        run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/booking_core/tests/src/Unit/ --testdox
+
       - name: Run kernel tests
-        run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/ --testdox
+        run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/booking_core/tests/src/Kernel/ --testdox

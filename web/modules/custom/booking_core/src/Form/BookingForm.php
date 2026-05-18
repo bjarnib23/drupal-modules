@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Mail\MailManagerInterface;
 use Drupal\Core\Url;
+use Drupal\booking_core\BookingSlotService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class BookingForm extends FormBase {
@@ -18,6 +19,7 @@ class BookingForm extends FormBase {
   protected MailManagerInterface $mailManager;
   protected LockBackendInterface $lock;
   protected FloodInterface $flood;
+  protected BookingSlotService $slotService;
 
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -25,12 +27,14 @@ class BookingForm extends FormBase {
     ConfigFactoryInterface $config_factory,
     LockBackendInterface $lock,
     FloodInterface $flood,
+    BookingSlotService $slot_service,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->mailManager       = $mail_manager;
     $this->configFactory     = $config_factory;
     $this->lock              = $lock;
     $this->flood             = $flood;
+    $this->slotService       = $slot_service;
   }
 
   public static function create(ContainerInterface $container): static {
@@ -40,6 +44,7 @@ class BookingForm extends FormBase {
       $container->get('config.factory'),
       $container->get('lock'),
       $container->get('flood'),
+      $container->get('booking_core.slot_service'),
     );
   }
 
@@ -95,7 +100,7 @@ class BookingForm extends FormBase {
 
     $input         = $form_state->getUserInput();
     $selected_date = $form_state->getValue('date') ?? ($input['date'] ?? NULL);
-    $slots         = $selected_date ? $this->getAvailableSlots($selected_date) : [];
+    $slots         = $selected_date ? $this->slotService->getAvailableSlots($selected_date) : [];
 
     $form['time'] = [
       '#type'         => 'select',
@@ -127,55 +132,6 @@ class BookingForm extends FormBase {
     return $form['time'];
   }
 
-  private function getAvailableSlots(?string $date): array {
-    if (!$date) {
-      return [];
-    }
-    $config        = $this->configFactory->get('booking_core.settings');
-    $open_days     = $config->get('open_days') ?? [1, 2, 3, 4, 5];
-    $open_time     = $config->get('open_time') ?? '09:00';
-    $close_time    = $config->get('close_time') ?? '17:00';
-    $slot_duration = (int) ($config->get('slot_duration') ?? 30);
-    $weeks_ahead   = (int) ($config->get('weeks_ahead') ?? 4);
-
-    $day_of_week = (int) date('w', strtotime($date));
-    if (!in_array($day_of_week, array_map('intval', $open_days))) {
-      return [];
-    }
-
-    $max_date = date('Y-m-d', strtotime("+{$weeks_ahead} weeks"));
-    if ($date > $max_date || $date <= date('Y-m-d')) {
-      return [];
-    }
-
-    $booked = $this->entityTypeManager->getStorage('booking')->getQuery()
-      ->condition('date', $date . 'T', 'STARTS_WITH')
-      ->accessCheck(FALSE)
-      ->execute();
-
-    $booked_times = [];
-    if ($booked) {
-      $bookings = $this->entityTypeManager->getStorage('booking')->loadMultiple($booked);
-      foreach ($bookings as $b) {
-        $booked_times[] = substr($b->get('date')->value, 11, 5);
-      }
-    }
-
-    $slots  = [];
-    $cursor = strtotime($date . ' ' . $open_time);
-    $end    = strtotime($date . ' ' . $close_time);
-
-    while ($cursor < $end) {
-      $time = date('H:i', $cursor);
-      if (!in_array($time, $booked_times)) {
-        $slots[$time] = $time;
-      }
-      $cursor += $slot_duration * 60;
-    }
-
-    return $slots;
-  }
-
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $ip = $this->getRequest()->getClientIp();
     if (!$this->flood->isAllowed('booking_core_submit', 5, 3600, $ip)) {
@@ -187,7 +143,7 @@ class BookingForm extends FormBase {
     $time = $form_state->getValue('time');
 
     if ($date) {
-      $slots = $this->getAvailableSlots($date);
+      $slots = $this->slotService->getAvailableSlots($date);
       if (empty($slots)) {
         $form_state->setErrorByName('date', $this->t('No appointments are available on this date.'));
       }
@@ -209,7 +165,7 @@ class BookingForm extends FormBase {
     }
 
     // Re-check availability inside the lock to prevent race conditions.
-    $slots = $this->getAvailableSlots($date);
+    $slots = $this->slotService->getAvailableSlots($date);
     if (!isset($slots[$time])) {
       $this->lock->release($lock_key);
       $this->messenger()->addError($this->t('That time slot was just taken. Please choose another.'));
