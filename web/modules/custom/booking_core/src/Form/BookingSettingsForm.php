@@ -16,7 +16,8 @@ class BookingSettingsForm extends ConfigFormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    $config = $this->config('booking_core.settings');
+    $config   = $this->config('booking_core.settings');
+    $services = $config->get('services') ?? [];
 
     $form['company_name'] = [
       '#type'          => 'textfield',
@@ -32,13 +33,25 @@ class BookingSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('admin_email') ?? '',
     ];
 
+    $form['services'] = [
+      '#type'          => 'textarea',
+      '#title'         => $this->t('Available services'),
+      '#description'   => $this->t('One service per line. These appear as options in the booking form.'),
+      '#default_value' => implode("\n", $services),
+      '#rows'          => 8,
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
+    $raw      = $form_state->getValue('services');
+    $services = array_values(array_filter(array_map('trim', explode("\n", $raw))));
+
     $this->config('booking_core.settings')
       ->set('company_name', $form_state->getValue('company_name'))
       ->set('admin_email', $form_state->getValue('admin_email'))
+      ->set('services', $services)
       ->save();
 
     parent::submitForm($form, $form_state);
