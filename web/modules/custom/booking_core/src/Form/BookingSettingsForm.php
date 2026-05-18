@@ -5,6 +5,9 @@ namespace Drupal\booking_core\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * Settings form for the Booking Core module.
+ */
 class BookingSettingsForm extends ConfigFormBase {
 
   public function getFormId(): string {
@@ -115,7 +118,7 @@ class BookingSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $raw      = $form_state->getValue('services');
     $services = array_values(array_filter(array_map('trim', explode("\n", $raw))));
-    $days     = array_values(array_filter($form_state->getValue('open_days')));
+    $days     = array_values(array_map('intval', array_filter($form_state->getValue('open_days'))));
 
     $this->config('booking_core.settings')
       ->set('company_name', $form_state->getValue('company_name'))

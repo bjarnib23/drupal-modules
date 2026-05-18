@@ -5,6 +5,9 @@ namespace Drupal\booking_core;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
+/**
+ * Generates and validates available booking time slots.
+ */
 class BookingSlotService {
 
   public function __construct(
@@ -29,13 +32,16 @@ class BookingSlotService {
     $slot_duration = (int) ($config->get('slot_duration') ?? 30);
     $weeks_ahead   = (int) ($config->get('weeks_ahead') ?? 4);
 
-    $day_of_week = (int) date('w', strtotime($date));
+    $utc         = new \DateTimeZone('UTC');
+    $dt          = new \DateTime($date . ' 00:00:00', $utc);
+    $day_of_week = (int) $dt->format('w');
     if (!in_array($day_of_week, array_map('intval', $open_days))) {
       return [];
     }
 
-    $max_date = date('Y-m-d', strtotime("+{$weeks_ahead} weeks"));
-    if ($date > $max_date || $date <= date('Y-m-d')) {
+    $today    = new \DateTime('now', $utc);
+    $max_date = new \DateTime("+{$weeks_ahead} weeks", $utc);
+    if ($dt <= $today || $dt > $max_date) {
       return [];
     }
 
@@ -74,16 +80,17 @@ class BookingSlotService {
    * @return array<string, string>
    */
   public function generateSlots(string $date, string $open_time, string $close_time, int $slot_duration, array $booked_times = []): array {
+    $utc    = new \DateTimeZone('UTC');
     $slots  = [];
-    $cursor = strtotime($date . ' ' . $open_time);
-    $end    = strtotime($date . ' ' . $close_time);
+    $cursor = new \DateTime($date . ' ' . $open_time, $utc);
+    $end    = new \DateTime($date . ' ' . $close_time, $utc);
 
     while ($cursor < $end) {
-      $time = date('H:i', $cursor);
+      $time = $cursor->format('H:i');
       if (!in_array($time, $booked_times)) {
         $slots[$time] = $time;
       }
-      $cursor += $slot_duration * 60;
+      $cursor->modify("+{$slot_duration} minutes");
     }
 
     return $slots;

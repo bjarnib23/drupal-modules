@@ -8,12 +8,16 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
+/**
+ * Defines the Booking entity.
+ */
 #[ContentEntityType(
   id: 'booking',
   label: new TranslatableMarkup('Booking'),
   label_collection: new TranslatableMarkup('Bookings'),
   handlers: [
     'storage' => 'Drupal\Core\Entity\Sql\SqlContentEntityStorage',
+    'access' => 'Drupal\Core\Entity\EntityAccessControlHandler',
   ],
   base_table: 'booking',
   entity_keys: [
