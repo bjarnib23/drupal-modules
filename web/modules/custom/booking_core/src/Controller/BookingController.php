@@ -46,6 +46,7 @@ class BookingController extends ControllerBase {
       $rows[] = [
         $booking->get('name')->value,
         $booking->get('email')->value,
+        $booking->get('service')->value ?: '—',
         $formatted,
         Markup::create(
           Link::fromTextAndUrl('View', Url::fromRoute('booking_core.admin_view', ['booking' => $booking->id()]))->toString() .
@@ -57,7 +58,7 @@ class BookingController extends ControllerBase {
 
     return [
       '#type'   => 'table',
-      '#header' => ['Name', 'Email', 'Date', 'Actions'],
+      '#header' => ['Name', 'Email', 'Service', 'Date', 'Actions'],
       '#rows'   => $rows,
       '#empty'  => $this->t('No bookings yet.'),
     ];
