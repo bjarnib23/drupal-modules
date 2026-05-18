@@ -29,6 +29,10 @@ booking_core.admin_view:
     _title: 'View Booking'
   requirements:
     _permission: 'administer bookings'
+  options:
+    parameters:
+      booking:
+        type: entity:booking
 
 booking_core.admin_delete:
   path: '/admin/bookings/{booking}/delete'
@@ -37,6 +41,10 @@ booking_core.admin_delete:
     _title: 'Delete Booking'
   requirements:
     _permission: 'administer bookings'
+  options:
+    parameters:
+      booking:
+        type: entity:booking
 
 booking_core.settings:
   path: '/admin/config/booking-core/settings'

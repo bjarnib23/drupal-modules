@@ -24,6 +24,7 @@ function booking_core_mail(string $key, array &$message, array $params): void {
         '<strong>Name:</strong> ' . htmlspecialchars($params['name']) . '<br>' .
         '<strong>Email:</strong> ' . htmlspecialchars($params['email']) . '<br>' .
         '<strong>Phone:</strong> ' . htmlspecialchars($params['phone']) . '<br>' .
+        '<strong>Service:</strong> ' . htmlspecialchars($params['service']) . '<br>' .
         '<strong>Date:</strong> ' . htmlspecialchars($params['date']) . '<br>' .
         '<strong>Notes:</strong> ' . htmlspecialchars($params['notes'])
       );
