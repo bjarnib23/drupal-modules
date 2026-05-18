@@ -14,3 +14,21 @@ booking_core.settings:
       sequence:
         type: string
         label: 'Service'
+    open_days:
+      type: sequence
+      label: 'Open days'
+      sequence:
+        type: integer
+        label: 'Day'
+    open_time:
+      type: string
+      label: 'Opening time'
+    close_time:
+      type: string
+      label: 'Closing time'
+    slot_duration:
+      type: integer
+      label: 'Slot duration in minutes'
+    weeks_ahead:
+      type: integer
+      label: 'Weeks ahead'
