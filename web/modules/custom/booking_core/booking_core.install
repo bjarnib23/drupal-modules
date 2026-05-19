@@ -4,15 +4,3 @@
  * @file
  * Install, update, and uninstall functions for the Booking Core module.
  */
-
-/**
- * Add service field to the booking entity.
- */
-function booking_core_update_10001(): void {
-  $manager = \Drupal::entityDefinitionUpdateManager();
-  $field    = \Drupal\Core\Field\BaseFieldDefinition::create('string')
-    ->setLabel(new \Drupal\Core\StringTranslation\TranslatableMarkup('Service'))
-    ->setSetting('max_length', 255);
-
-  $manager->installFieldStorageDefinition('service', 'booking', 'booking_core', $field);
-}
