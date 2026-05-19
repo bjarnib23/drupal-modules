@@ -18,14 +18,28 @@ use Drupal\booking_core\BookingInterface;
   label: new TranslatableMarkup('Booking'),
   label_collection: new TranslatableMarkup('Bookings'),
   handlers: [
-    'storage' => 'Drupal\Core\Entity\Sql\SqlContentEntityStorage',
-    'access' => 'Drupal\Core\Entity\EntityAccessControlHandler',
+    'storage'        => 'Drupal\Core\Entity\Sql\SqlContentEntityStorage',
+    'access'         => 'Drupal\Core\Entity\EntityAccessControlHandler',
+    'list_builder'   => 'Drupal\booking_core\BookingListBuilder',
+    'view_builder'   => 'Drupal\booking_core\BookingViewBuilder',
+    'form'           => [
+      'delete' => 'Drupal\booking_core\Form\BookingDeleteForm',
+    ],
+    'route_provider' => [
+      'html' => 'Drupal\Core\Entity\Routing\AdminHtmlRouteProvider',
+    ],
   ],
   base_table: 'booking',
+  admin_permission: 'administer bookings',
   entity_keys: [
-    'id' => 'id',
-    'uuid' => 'uuid',
+    'id'    => 'id',
+    'uuid'  => 'uuid',
     'label' => 'name',
+  ],
+  links: [
+    'canonical'   => '/admin/bookings/{booking}',
+    'delete-form' => '/admin/bookings/{booking}/delete',
+    'collection'  => '/admin/bookings',
   ],
 )]
 class Booking extends ContentEntityBase implements BookingInterface {

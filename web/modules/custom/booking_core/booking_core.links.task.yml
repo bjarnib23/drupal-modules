@@ -1,0 +1,11 @@
+entity.booking.canonical:
+  route_name: entity.booking.canonical
+  base_route: entity.booking.canonical
+  title: 'View'
+  weight: 0
+
+entity.booking.delete_form:
+  route_name: entity.booking.delete_form
+  base_route: entity.booking.canonical
+  title: 'Delete'
+  weight: 10
