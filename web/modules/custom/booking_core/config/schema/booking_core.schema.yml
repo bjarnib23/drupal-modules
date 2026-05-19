@@ -2,9 +2,6 @@ booking_core.settings:
   type: config_object
   label: 'Booking Core settings'
   mapping:
-    company_name:
-      type: string
-      label: 'Company name'
     admin_email:
       type: email
       label: 'Admin notification email'

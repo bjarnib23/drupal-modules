@@ -23,11 +23,9 @@ class BookingSettingsForm extends ConfigFormBase {
     $services = $config->get('services') ?? [];
     $days     = $config->get('open_days') ?? [1, 2, 3, 4, 5];
 
-    $form['company_name'] = [
-      '#type'          => 'textfield',
-      '#title'         => $this->t('Company name'),
-      '#description'   => $this->t('Used in confirmation emails.'),
-      '#default_value' => $config->get('company_name') ?? '',
+    $form['company_name_notice'] = [
+      '#type'   => 'item',
+      '#markup' => $this->t('The company name used in emails is taken from the <a href="/admin/config/system/site-information">site name</a>.'),
     ];
 
     $form['admin_email'] = [
@@ -121,7 +119,6 @@ class BookingSettingsForm extends ConfigFormBase {
     $days     = array_values(array_map('intval', array_filter($form_state->getValue('open_days'))));
 
     $this->config('booking_core.settings')
-      ->set('company_name', $form_state->getValue('company_name'))
       ->set('admin_email', $form_state->getValue('admin_email'))
       ->set('services', $services)
       ->set('open_days', $days)

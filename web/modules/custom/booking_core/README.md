@@ -35,7 +35,6 @@ Go to **Administration → Configuration → Booking Core Settings** (`/admin/co
 
 | Setting | Description | Default |
 |---|---|---|
-| Company name | Used in the footer of confirmation emails | — |
 | Admin notification email | Where new booking notifications are sent | Site email |
 | Available services | One service per line, shown as a dropdown on the booking form | — |
 | Open days | Which days of the week accept bookings | Mon–Fri |
@@ -71,6 +70,8 @@ Two emails are sent on each successful booking:
 
 - **Confirmation** (to the customer) — includes service, date/time, and notes if provided
 - **Notification** (to the admin email) — includes all booking details
+
+The company name in the email footer is taken from the site name at `/admin/config/system/site-information`.
 
 Dates are formatted using the site's configured timezone.
 
