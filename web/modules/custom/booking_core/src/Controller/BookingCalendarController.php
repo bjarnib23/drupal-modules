@@ -47,6 +47,31 @@ class BookingCalendarController extends ControllerBase {
       ];
     }
 
+    $blocked_periods = $this->config('booking_core.settings')->get('blocked_periods') ?? [];
+    foreach ($blocked_periods as $period) {
+      if (empty($period['date'])) {
+        continue;
+      }
+      $event = [
+        'display' => 'background',
+        'color'   => '#ef4444',
+        'title'   => $period['reason'] ?? $this->t('Blocked')->render(),
+      ];
+      if (!empty($period['all_day'])) {
+        // FullCalendar all-day end is exclusive, so add one day.
+        $end_dt      = new \DateTime($period['date']);
+        $end_dt->modify('+1 day');
+        $event['start'] = $period['date'];
+        $event['end']   = $end_dt->format('Y-m-d');
+        $event['allDay'] = TRUE;
+      }
+      else {
+        $event['start'] = $period['date'] . 'T' . ($period['start_time'] ?? '00:00');
+        $event['end']   = $period['date'] . 'T' . ($period['end_time'] ?? '23:59');
+      }
+      $events[] = $event;
+    }
+
     return new JsonResponse($events);
   }
 

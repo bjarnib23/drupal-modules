@@ -101,7 +101,114 @@ class BookingSettingsForm extends ConfigFormBase {
       '#max'           => 52,
     ];
 
+    // ---- Blocked periods ----
+    if ($form_state->get('blocked_periods') === NULL) {
+      $form_state->set('blocked_periods', $config->get('blocked_periods') ?? []);
+    }
+    $periods = $form_state->get('blocked_periods');
+    $removed = $form_state->get('blocked_removed') ?? [];
+
+    $form['blocked'] = [
+      '#type'       => 'fieldset',
+      '#title'      => $this->t('Blocked dates / periods'),
+      '#prefix'     => '<div id="blocked-periods-wrapper">',
+      '#suffix'     => '</div>',
+    ];
+
+    $form['blocked']['table'] = [
+      '#type'   => 'table',
+      '#header' => [
+        $this->t('Date'),
+        $this->t('All day'),
+        $this->t('Start time'),
+        $this->t('End time'),
+        $this->t('Reason'),
+        $this->t('Remove'),
+      ],
+      '#empty'  => $this->t('No blocked periods. Click "Add period" to block a date.'),
+    ];
+
+    foreach ($periods as $i => $period) {
+      if (in_array($i, $removed)) {
+        continue;
+      }
+      $form['blocked']['table'][$i]['date'] = [
+        '#type'          => 'date',
+        '#default_value' => $period['date'] ?? '',
+      ];
+      $form['blocked']['table'][$i]['all_day'] = [
+        '#type'          => 'checkbox',
+        '#default_value' => $period['all_day'] ?? FALSE,
+      ];
+      $form['blocked']['table'][$i]['start_time'] = [
+        '#type'          => 'textfield',
+        '#default_value' => $period['start_time'] ?? '',
+        '#size'          => 6,
+        '#placeholder'   => 'HH:MM',
+        '#states'        => [
+          'disabled' => [':input[name="table[' . $i . '][all_day]"]' => ['checked' => TRUE]],
+        ],
+      ];
+      $form['blocked']['table'][$i]['end_time'] = [
+        '#type'          => 'textfield',
+        '#default_value' => $period['end_time'] ?? '',
+        '#size'          => 6,
+        '#placeholder'   => 'HH:MM',
+        '#states'        => [
+          'disabled' => [':input[name="table[' . $i . '][all_day]"]' => ['checked' => TRUE]],
+        ],
+      ];
+      $form['blocked']['table'][$i]['reason'] = [
+        '#type'          => 'textfield',
+        '#default_value' => $period['reason'] ?? '',
+        '#size'          => 20,
+      ];
+      $form['blocked']['table'][$i]['remove'] = [
+        '#type'                    => 'submit',
+        '#value'                   => $this->t('Remove'),
+        '#name'                    => 'remove_period_' . $i,
+        '#submit'                  => ['::removeBlockedPeriod'],
+        '#limit_validation_errors' => [],
+        '#ajax'                    => [
+          'callback' => '::blockedPeriodsCallback',
+          'wrapper'  => 'blocked-periods-wrapper',
+        ],
+        '#row'                     => $i,
+      ];
+    }
+
+    $form['blocked']['add_period'] = [
+      '#type'                    => 'submit',
+      '#value'                   => $this->t('Add period'),
+      '#submit'                  => ['::addBlockedPeriod'],
+      '#limit_validation_errors' => [],
+      '#ajax'                    => [
+        'callback' => '::blockedPeriodsCallback',
+        'wrapper'  => 'blocked-periods-wrapper',
+      ],
+    ];
+
     return parent::buildForm($form, $form_state);
+  }
+
+  public function addBlockedPeriod(array &$form, FormStateInterface $form_state): void {
+    $periods   = $form_state->get('blocked_periods') ?? [];
+    $periods[] = ['date' => '', 'all_day' => FALSE, 'start_time' => '', 'end_time' => '', 'reason' => ''];
+    $form_state->set('blocked_periods', $periods);
+    $form_state->setRebuild();
+  }
+
+  public function removeBlockedPeriod(array &$form, FormStateInterface $form_state): void {
+    $trigger  = $form_state->getTriggeringElement();
+    $row      = $trigger['#row'];
+    $removed  = $form_state->get('blocked_removed') ?? [];
+    $removed[] = $row;
+    $form_state->set('blocked_removed', $removed);
+    $form_state->setRebuild();
+  }
+
+  public function blockedPeriodsCallback(array &$form, FormStateInterface $form_state): array {
+    return $form['blocked'];
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state): void {
@@ -111,12 +218,46 @@ class BookingSettingsForm extends ConfigFormBase {
         $form_state->setErrorByName($field, $this->t('Time must be in HH:MM format.'));
       }
     }
+
+    $table   = $form_state->getValue('table') ?? [];
+    $removed = $form_state->get('blocked_removed') ?? [];
+    foreach ($table as $i => $row) {
+      if (in_array($i, $removed)) {
+        continue;
+      }
+      if (empty($row['date'])) {
+        $form_state->setError($form['blocked']['table'][$i]['date'], $this->t('Date is required for each blocked period.'));
+      }
+      if (empty($row['all_day'])) {
+        foreach (['start_time', 'end_time'] as $tf) {
+          if (!empty($row[$tf]) && !preg_match('/^\d{2}:\d{2}$/', $row[$tf])) {
+            $form_state->setError($form['blocked']['table'][$i][$tf], $this->t('Time must be in HH:MM format.'));
+          }
+        }
+      }
+    }
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $raw      = $form_state->getValue('services');
     $services = array_values(array_filter(array_map('trim', explode("\n", $raw))));
     $days     = array_values(array_map('intval', array_filter($form_state->getValue('open_days'))));
+
+    $table   = $form_state->getValue('table') ?? [];
+    $removed = $form_state->get('blocked_removed') ?? [];
+    $blocked = [];
+    foreach ($table as $i => $row) {
+      if (in_array($i, $removed) || empty($row['date'])) {
+        continue;
+      }
+      $blocked[] = [
+        'date'       => $row['date'],
+        'all_day'    => (bool) $row['all_day'],
+        'start_time' => $row['all_day'] ? '' : ($row['start_time'] ?? ''),
+        'end_time'   => $row['all_day'] ? '' : ($row['end_time'] ?? ''),
+        'reason'     => trim($row['reason'] ?? ''),
+      ];
+    }
 
     $this->config('booking_core.settings')
       ->set('admin_email', $form_state->getValue('admin_email'))
@@ -126,6 +267,7 @@ class BookingSettingsForm extends ConfigFormBase {
       ->set('close_time', $form_state->getValue('close_time'))
       ->set('slot_duration', (int) $form_state->getValue('slot_duration'))
       ->set('weeks_ahead', (int) $form_state->getValue('weeks_ahead'))
+      ->set('blocked_periods', $blocked)
       ->save();
 
     parent::submitForm($form, $form_state);

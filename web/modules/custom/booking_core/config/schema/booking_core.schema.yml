@@ -29,3 +29,25 @@ booking_core.settings:
     weeks_ahead:
       type: integer
       label: 'Weeks ahead'
+    blocked_periods:
+      type: sequence
+      label: 'Blocked dates and periods'
+      sequence:
+        type: mapping
+        label: 'Blocked period'
+        mapping:
+          date:
+            type: string
+            label: 'Date (YYYY-MM-DD)'
+          all_day:
+            type: boolean
+            label: 'Block entire day'
+          start_time:
+            type: string
+            label: 'Start time (HH:MM)'
+          end_time:
+            type: string
+            label: 'End time (HH:MM)'
+          reason:
+            type: string
+            label: 'Reason'
