@@ -5,7 +5,7 @@ namespace Drupal\booking_core\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Url;
-use Drupal\booking_core\Entity\Booking;
+use Drupal\booking_core\BookingInterface;
 
 /**
  * Controller for booking admin pages and the thank-you page.
@@ -28,24 +28,22 @@ class BookingController extends ControllerBase {
     $rows     = [];
 
     foreach ($bookings as $booking) {
-      $formatted = $this->formatDate($booking->get('date')->value);
-
       $rows[] = [
-        $booking->get('name')->value,
-        $booking->get('email')->value,
-        $booking->get('service')->value ?: '—',
-        $formatted,
+        $booking->getName(),
+        $booking->getEmail(),
+        $booking->getService() ?: '—',
+        $this->formatDate($booking->getDate()),
         [
           'data' => [
-            '#type' => 'operations',
+            '#type'  => 'operations',
             '#links' => [
               'view' => [
                 'title' => $this->t('View'),
-                'url' => Url::fromRoute('booking_core.admin_view', ['booking' => $booking->id()]),
+                'url'   => Url::fromRoute('booking_core.admin_view', ['booking' => $booking->id()]),
               ],
               'delete' => [
                 'title' => $this->t('Delete'),
-                'url' => Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()]),
+                'url'   => Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()]),
               ],
             ],
           ],
@@ -67,14 +65,14 @@ class BookingController extends ControllerBase {
     ];
   }
 
-  public function adminView(Booking $booking): array {
+  public function adminView(BookingInterface $booking): array {
     $rows = [
-      [['data' => $this->t('Name'),    'header' => TRUE], $booking->get('name')->value],
-      [['data' => $this->t('Email'),   'header' => TRUE], $booking->get('email')->value],
-      [['data' => $this->t('Phone'),   'header' => TRUE], $booking->get('phone')->value ?: '—'],
-      [['data' => $this->t('Service'), 'header' => TRUE], $booking->get('service')->value ?: '—'],
-      [['data' => $this->t('Date'),    'header' => TRUE], $this->formatDate($booking->get('date')->value)],
-      [['data' => $this->t('Notes'),   'header' => TRUE], $booking->get('notes')->value ?: '—'],
+      [['data' => $this->t('Name'),    'header' => TRUE], $booking->getName()],
+      [['data' => $this->t('Email'),   'header' => TRUE], $booking->getEmail()],
+      [['data' => $this->t('Phone'),   'header' => TRUE], $booking->getPhone() ?: '—'],
+      [['data' => $this->t('Service'), 'header' => TRUE], $booking->getService() ?: '—'],
+      [['data' => $this->t('Date'),    'header' => TRUE], $this->formatDate($booking->getDate())],
+      [['data' => $this->t('Notes'),   'header' => TRUE], $booking->getNotes() ?: '—'],
     ];
 
     return [
@@ -84,15 +82,15 @@ class BookingController extends ControllerBase {
         '#caption' => $this->t('Booking details'),
       ],
       'actions' => [
-        '#type' => 'container',
-        'back' => [
+        '#type'   => 'container',
+        'back'    => [
           '#type'       => 'link',
           '#title'      => $this->t('← All bookings'),
           '#url'        => Url::fromRoute('booking_core.admin_list'),
           '#attributes' => ['class' => ['button']],
           '#suffix'     => ' ',
         ],
-        'delete' => [
+        'delete'  => [
           '#type'       => 'link',
           '#title'      => $this->t('Delete booking'),
           '#url'        => Url::fromRoute('booking_core.admin_delete', ['booking' => $booking->id()]),

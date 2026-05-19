@@ -6,7 +6,7 @@ use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
-use Drupal\booking_core\Entity\Booking;
+use Drupal\booking_core\BookingInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -14,7 +14,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class BookingDeleteForm extends ConfirmFormBase {
 
-  protected Booking $booking;
+  protected BookingInterface $booking;
 
   public function getFormId(): string {
     return 'booking_core_delete_form';
@@ -22,7 +22,7 @@ class BookingDeleteForm extends ConfirmFormBase {
 
   public function getQuestion(): TranslatableMarkup {
     return $this->t('Are you sure you want to delete the booking for %name?', [
-      '%name' => $this->booking->get('name')->value,
+      '%name' => $this->booking->getName(),
     ]);
   }
 
@@ -30,7 +30,7 @@ class BookingDeleteForm extends ConfirmFormBase {
     return Url::fromRoute('booking_core.admin_list');
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state, ?Booking $booking = NULL): array {
+  public function buildForm(array $form, FormStateInterface $form_state, ?BookingInterface $booking = NULL): array {
     if ($booking === NULL) {
       throw new NotFoundHttpException();
     }
