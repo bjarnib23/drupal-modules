@@ -1,7 +1,7 @@
-booking_core.admin_list:
+entity.booking.collection:
   title: 'Bookings'
   description: 'Manage bookings.'
-  route_name: booking_core.admin_list
+  route_name: entity.booking.collection
   parent: system.admin
   weight: 10
 
