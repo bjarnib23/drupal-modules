@@ -45,9 +45,23 @@ class BookingSlotService {
       return [];
     }
 
+    $blocked_periods = $config->get('blocked_periods') ?? [];
+    $blocked_ranges  = [];
+    foreach ($blocked_periods as $period) {
+      if (($period['date'] ?? '') !== $date) {
+        continue;
+      }
+      if (!empty($period['all_day'])) {
+        return [];
+      }
+      if (!empty($period['start_time']) && !empty($period['end_time'])) {
+        $blocked_ranges[] = ['start' => $period['start_time'], 'end' => $period['end_time']];
+      }
+    }
+
     $booked_times = $this->getBookedTimes($date);
 
-    return $this->generateSlots($date, $open_time, $close_time, $slot_duration, $booked_times);
+    return $this->generateSlots($date, $open_time, $close_time, $slot_duration, $booked_times, $blocked_ranges);
   }
 
   /**
@@ -74,12 +88,13 @@ class BookingSlotService {
   }
 
   /**
-   * Generates all slots between open and close time, excluding booked ones.
+   * Generates all slots between open and close time, excluding booked/blocked ones.
    *
    * @param string[] $booked_times
+   * @param array<array{start: string, end: string}> $blocked_ranges
    * @return array<string, string>
    */
-  public function generateSlots(string $date, string $open_time, string $close_time, int $slot_duration, array $booked_times = []): array {
+  public function generateSlots(string $date, string $open_time, string $close_time, int $slot_duration, array $booked_times = [], array $blocked_ranges = []): array {
     $utc    = new \DateTimeZone('UTC');
     $slots  = [];
     $cursor = new \DateTime($date . ' ' . $open_time, $utc);
@@ -87,13 +102,27 @@ class BookingSlotService {
 
     while ($cursor < $end) {
       $time = $cursor->format('H:i');
-      if (!in_array($time, $booked_times)) {
+      if (!in_array($time, $booked_times) && !$this->isBlocked($time, $blocked_ranges)) {
         $slots[$time] = $time;
       }
       $cursor->modify("+{$slot_duration} minutes");
     }
 
     return $slots;
+  }
+
+  /**
+   * Returns TRUE if the given time falls within any blocked range.
+   *
+   * @param array<array{start: string, end: string}> $blocked_ranges
+   */
+  private function isBlocked(string $time, array $blocked_ranges): bool {
+    foreach ($blocked_ranges as $range) {
+      if ($time >= $range['start'] && $time < $range['end']) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
 }
