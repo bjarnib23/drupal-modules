@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * @file
+ * Hooks and procedural code for the Gift Card Core module.
+ */
+
+/**
+ * Implements hook_mail().
+ */
+function giftcard_core_mail(string $key, array &$message, array $params): void {
+  $company  = \Drupal::config('system.site')->get('name') ?: 'Us';
+
+  /** @var \Drupal\giftcard_core\GiftCardInterface $giftCard */
+  $giftCard = $params['gift_card'];
+
+  switch ($key) {
+    case 'gift_card_sender':
+      $message['subject'] = t('Your gift card purchase is confirmed — @code', [
+        '@code' => $giftCard->getCode(),
+      ]);
+      $message['body'][] = t('Hi @name,', ['@name' => $giftCard->getSenderName()]);
+      $message['body'][] = t('Your gift card has been sent successfully.');
+      $message['body'][] = t('Gift card code: @code', ['@code' => $giftCard->getCode()]);
+      $message['body'][] = t('Recipient: @name (@email)', [
+        '@name'  => $giftCard->getRecipientName(),
+        '@email' => $giftCard->getRecipientEmail(),
+      ]);
+      $message['body'][] = t('Amount: @amount @currency', [
+        '@amount'   => $giftCard->getAmount(),
+        '@currency' => $giftCard->getCurrency(),
+      ]);
+      $message['body'][] = t('Thank you,') . "\n" . $company;
+      break;
+
+    case 'gift_card_recipient':
+      $message['subject'] = t('You received a gift card from @sender!', [
+        '@sender' => $giftCard->getSenderName(),
+      ]);
+      $message['body'][] = t('Hi @name,', ['@name' => $giftCard->getRecipientName()]);
+      $message['body'][] = t('@sender has sent you a gift card!', [
+        '@sender' => $giftCard->getSenderName(),
+      ]);
+      $message['body'][] = t('Gift card code: @code', ['@code' => $giftCard->getCode()]);
+      $message['body'][] = t('Value: @amount @currency', [
+        '@amount'   => $giftCard->getAmount(),
+        '@currency' => $giftCard->getCurrency(),
+      ]);
+      if ($giftCard->getMessage() !== '') {
+        $message['body'][] = t('Message from @sender:', ['@sender' => $giftCard->getSenderName()]);
+        $message['body'][] = $giftCard->getMessage();
+      }
+      $message['body'][] = t('Thank you,') . "\n" . $company;
+      break;
+  }
+}
