@@ -58,9 +58,12 @@ class GiftCardWebhookController extends ControllerBase {
    */
   public function receive(Request $request): Response {
     $body      = $request->getContent();
+    $salt      = $request->headers->get('rapyd-idempotency', '');
+    $timestamp = $request->headers->get('rapyd-timestamp', '');
     $signature = $request->headers->get('rapyd-signature', '');
+    $path      = $request->getPathInfo();
 
-    if (!$this->paymentClient->verifyWebhookSignature($body, $signature)) {
+    if (!$this->paymentClient->verifyWebhookSignature($body, $salt, $timestamp, $signature, $path)) {
       $this->loggerFactory->get('giftcard_core')->warning('Received webhook with invalid signature.');
       return new Response('Forbidden', Response::HTTP_FORBIDDEN);
     }
