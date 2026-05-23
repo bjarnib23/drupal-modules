@@ -1,0 +1,9 @@
+name: Rapyd Checkout
+type: module
+description: 'Rapyd Hosted Checkout payment gateway for Drupal Commerce.'
+package: Commerce (contrib)
+core_version_requirement: ^10 || ^11
+dependencies:
+  - commerce:commerce_order
+  - commerce:commerce_payment
+  - key:key
