@@ -1,7 +1,7 @@
 rapyd_access_key_id: ''
 rapyd_secret_key_id: ''
 rapyd_sandbox: true
-rapyd_country: 'IS'
-currency: 'ISK'
-min_amount: 1000
+rapyd_country: ''
+currency: ''
+min_amount: 1
 flood_threshold: 5
