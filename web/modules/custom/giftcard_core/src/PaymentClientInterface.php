@@ -30,10 +30,13 @@ interface PaymentClientInterface {
    * Always call this before trusting any webhook payload.
    *
    * @param string $body      Raw request body.
-   * @param string $signature Signature from the request header.
+   * @param string $salt      Value of the rapyd-idempotency request header.
+   * @param string $timestamp Value of the rapyd-timestamp request header.
+   * @param string $signature Value of the rapyd-signature request header.
+   * @param string $path      The request path (e.g. /gift-card/webhook).
    *
    * @return bool TRUE if the signature is valid.
    */
-  public function verifyWebhookSignature(string $body, string $signature): bool;
+  public function verifyWebhookSignature(string $body, string $salt, string $timestamp, string $signature, string $path): bool;
 
 }
