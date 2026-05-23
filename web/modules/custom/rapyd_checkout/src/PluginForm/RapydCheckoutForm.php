@@ -46,6 +46,9 @@ class RapydCheckoutForm extends PaymentOffsiteForm {
       throw new PaymentGatewayException('Could not initiate Rapyd checkout: ' . $e->getMessage(), 0, $e);
     }
 
+    $order->setData('rapyd_checkout_id', $result['checkout_id']);
+    $order->save();
+
     return $this->buildRedirectForm($form, $form_state, $result['redirect_url'], [], self::REDIRECT_GET);
   }
 
