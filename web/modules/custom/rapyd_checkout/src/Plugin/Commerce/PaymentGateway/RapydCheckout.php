@@ -89,9 +89,9 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
   }
 
   public function onReturn(OrderInterface $order, Request $request): void {
-    $checkout_id = $request->query->get('checkout_id') ?: $request->query->get('id');
+    $checkout_id = $order->getData('rapyd_checkout_id');
     if (!$checkout_id) {
-      throw new PaymentGatewayException('Missing checkout ID in return URL.');
+      throw new PaymentGatewayException('Missing checkout ID for order.');
     }
 
     $client = $this->getRapydClient();
@@ -102,15 +102,19 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
       throw new PaymentGatewayException('Could not verify payment: ' . $e->getMessage(), 0, $e);
     }
 
-    if (($data['status'] ?? '') !== 'CLO') {
-      throw new PaymentGatewayException('Payment not completed (status: ' . ($data['status'] ?? 'unknown') . ').');
+    $payment_status   = $data['payment']['status'] ?? '';
+    $checkout_status  = $data['status'] ?? '';
+    if ($payment_status !== 'CLO' && $checkout_status !== 'DON') {
+      throw new PaymentGatewayException('Payment not completed (checkout: ' . $checkout_status . ', payment: ' . $payment_status . ').');
     }
 
     $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
 
+    $remote_id = $data['payment']['id'] ?? $data['id'] ?? $checkout_id;
+
     $existing = $payment_storage->loadByProperties([
       'order_id'  => $order->id(),
-      'remote_id' => $data['id'] ?? $checkout_id,
+      'remote_id' => $remote_id,
     ]);
     if ($existing) {
       return;
@@ -121,7 +125,7 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
       'amount'          => $order->getTotalPrice(),
       'payment_gateway' => $this->parentEntity->id(),
       'order_id'        => $order->id(),
-      'remote_id'       => $data['id'] ?? $checkout_id,
+      'remote_id'       => $remote_id,
     ]);
     $payment->save();
 
