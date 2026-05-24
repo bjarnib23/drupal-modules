@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class GiftCardEntityTest extends EntityKernelTestBase {
 
-  protected static $modules = ['giftcard_core'];
+  protected static $modules = ['giftcard_core', 'key'];
 
   protected function setUp(): void {
     parent::setUp();
