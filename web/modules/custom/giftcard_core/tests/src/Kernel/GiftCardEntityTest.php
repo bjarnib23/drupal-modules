@@ -62,4 +62,44 @@ class GiftCardEntityTest extends EntityKernelTestBase {
     $this->assertGreaterThan(0, $violations->count());
   }
 
+  public function testGiftCardSenderAndMessageArePersisted(): void {
+    $giftCard = GiftCard::create([
+      'code'            => 'SENDERTEST123456',
+      'recipient_name'  => 'Anna Sigurðardóttir',
+      'recipient_email' => 'anna@example.com',
+      'sender_name'     => 'Jón Jónsson',
+      'sender_email'    => 'jon@example.com',
+      'amount'          => 3000,
+      'currency'        => 'ISK',
+      'message'         => 'Til hamingju með afmælið!',
+      'status'          => 'active',
+    ]);
+    $giftCard->save();
+
+    $loaded = GiftCard::load($giftCard->id());
+    $this->assertSame('Jón Jónsson', $loaded->getSenderName());
+    $this->assertSame('jon@example.com', $loaded->getSenderEmail());
+    $this->assertSame('Til hamingju með afmælið!', $loaded->getMessage());
+  }
+
+  public function testGiftCardStatusCanBeUpdated(): void {
+    $giftCard = GiftCard::create([
+      'code'            => 'STATUSTEST123456',
+      'recipient_name'  => 'Anna Sigurðardóttir',
+      'recipient_email' => 'anna@example.com',
+      'sender_name'     => 'Jón Jónsson',
+      'sender_email'    => 'jon@example.com',
+      'amount'          => 2000,
+      'currency'        => 'ISK',
+      'status'          => 'active',
+    ]);
+    $giftCard->save();
+
+    $giftCard->setStatus('redeemed');
+    $this->assertSame(SAVED_UPDATED, $giftCard->save());
+
+    $loaded = GiftCard::load($giftCard->id());
+    $this->assertSame('redeemed', $loaded->getStatus());
+  }
+
 }
