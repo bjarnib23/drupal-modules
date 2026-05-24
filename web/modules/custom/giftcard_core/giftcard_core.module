@@ -9,7 +9,7 @@
  * Implements hook_mail().
  */
 function giftcard_core_mail(string $key, array &$message, array $params): void {
-  $company  = \Drupal::config('system.site')->get('name') ?: 'Us';
+  $company  = \Drupal::config('system.site')->get('name');
 
   /** @var \Drupal\giftcard_core\GiftCardInterface $giftCard */
   $giftCard = $params['gift_card'];
