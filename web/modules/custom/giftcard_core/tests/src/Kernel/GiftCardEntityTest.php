@@ -14,12 +14,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class GiftCardEntityTest extends EntityKernelTestBase {
 
-  protected static $modules = ['giftcard_core', 'key'];
+  protected static $modules = ['giftcard_core'];
 
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('gift_card');
-    $this->installConfig(['giftcard_core']);
   }
 
   public function testGiftCardCanBeCreatedAndLoaded(): void {
