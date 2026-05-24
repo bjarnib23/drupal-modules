@@ -8,10 +8,11 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\TempStore\PrivateTempStore;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\Tests\UnitTestCase;
 use Drupal\giftcard_core\GiftCardInterface;
 use Drupal\giftcard_core\GiftCardService;
-use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -39,6 +40,28 @@ class GiftCardServiceTest extends UnitTestCase {
     );
   }
 
+  public function testGenerateCodeReturnsSixteenCharacters(): void {
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $storage->method('loadByProperties')->willReturn([]);
+    $code = $this->makeService($storage)->generateCode();
+    $this->assertSame(16, strlen($code));
+  }
+
+  public function testGenerateCodeIsUppercaseAlphanumeric(): void {
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $storage->method('loadByProperties')->willReturn([]);
+    $code = $this->makeService($storage)->generateCode();
+    $this->assertMatchesRegularExpression('/^[A-Z0-9]{16}$/', $code);
+  }
+
+  public function testGenerateCodeReturnsDifferentValuesEachCall(): void {
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $storage->method('loadByProperties')->willReturn([]);
+    $service = $this->makeService($storage);
+    $codes   = array_map(fn() => $service->generateCode(), range(1, 10));
+    $this->assertGreaterThan(1, count(array_unique($codes)));
+  }
+
   public function testCreateGiftCardCreatesAndSavesEntity(): void {
     $card = $this->createMock(GiftCardInterface::class);
     $card->expects($this->once())->method('save');
@@ -47,9 +70,7 @@ class GiftCardServiceTest extends UnitTestCase {
     $storage->method('loadByProperties')->willReturn([]);
     $storage->method('create')->willReturn($card);
 
-    $service = $this->makeService($storage);
-
-    $result = $service->createGiftCard([
+    $result = $this->makeService($storage)->createGiftCard([
       'rapyd_payment_id' => 'pay_new',
       'code'             => 'TESTCODE1234567',
       'recipient_name'   => 'Bob',
@@ -63,7 +84,7 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertSame($card, $result);
   }
 
-  public function testCreateGiftCardReturnsDuplicateWithoutCreating(): void {
+  public function testCreateGiftCardPreventsDuplicates(): void {
     $existing = $this->createMock(GiftCardInterface::class);
 
     $storage = $this->createMock(EntityStorageInterface::class);
@@ -72,16 +93,43 @@ class GiftCardServiceTest extends UnitTestCase {
       ->willReturn([$existing]);
     $storage->expects($this->never())->method('create');
 
-    $service = $this->makeService($storage);
-
-    $result = $service->createGiftCard([
+    $result = $this->makeService($storage)->createGiftCard([
       'rapyd_payment_id' => 'pay_dup',
-      'code'             => 'DUPCODE1234567X',
       'amount'           => 5000,
       'currency'         => 'ISK',
     ]);
 
     $this->assertSame($existing, $result);
+  }
+
+  public function testStoreAndRetrieveCheckoutData(): void {
+    $data  = ['sender_name' => 'Jón', 'amount' => 5000];
+    $store = $this->createMock(PrivateTempStore::class);
+    $store->expects($this->once())->method('set')->with('checkout_data', $data);
+    $store->expects($this->once())->method('get')->with('checkout_data')->willReturn($data);
+
+    $tempStoreFactory = $this->createMock(PrivateTempStoreFactory::class);
+    $tempStoreFactory->method('get')->willReturn($store);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $storage->method('loadByProperties')->willReturn([]);
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+    $entityTypeManager->method('getStorage')->willReturn($storage);
+
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $loggerFactory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $loggerFactory->method('get')->willReturn($logger);
+
+    $service = new GiftCardService(
+      $entityTypeManager,
+      $this->createMock(ConfigFactoryInterface::class),
+      $loggerFactory,
+      $tempStoreFactory,
+      $this->createMock(KeyValueExpirableFactoryInterface::class),
+    );
+
+    $service->storeCheckoutData($data);
+    $this->assertSame($data, $service->getCheckoutData());
   }
 
 }
