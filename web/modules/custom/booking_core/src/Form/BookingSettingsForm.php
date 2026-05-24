@@ -10,14 +10,23 @@ use Drupal\Core\Form\FormStateInterface;
  */
 class BookingSettingsForm extends ConfigFormBase {
 
+  /**
+   * {@inheritdoc}
+   */
   public function getFormId(): string {
     return 'booking_core_settings_form';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getEditableConfigNames(): array {
     return ['booking_core.settings'];
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config   = $this->config('booking_core.settings');
     $services = $config->get('services') ?? [];
@@ -191,6 +200,9 @@ class BookingSettingsForm extends ConfigFormBase {
     return parent::buildForm($form, $form_state);
   }
 
+  /**
+   * AJAX submit handler to add a new blocked period row.
+   */
   public function addBlockedPeriod(array &$form, FormStateInterface $form_state): void {
     $periods   = $form_state->get('blocked_periods') ?? [];
     $periods[] = ['date' => '', 'all_day' => FALSE, 'start_time' => '', 'end_time' => '', 'reason' => ''];
@@ -198,19 +210,28 @@ class BookingSettingsForm extends ConfigFormBase {
     $form_state->setRebuild();
   }
 
+  /**
+   * AJAX submit handler to mark a blocked period row for removal.
+   */
   public function removeBlockedPeriod(array &$form, FormStateInterface $form_state): void {
-    $trigger  = $form_state->getTriggeringElement();
-    $row      = $trigger['#row'];
-    $removed  = $form_state->get('blocked_removed') ?? [];
+    $trigger   = $form_state->getTriggeringElement();
+    $row       = $trigger['#row'];
+    $removed   = $form_state->get('blocked_removed') ?? [];
     $removed[] = $row;
     $form_state->set('blocked_removed', $removed);
     $form_state->setRebuild();
   }
 
+  /**
+   * AJAX callback returning the updated blocked periods fieldset.
+   */
   public function blockedPeriodsCallback(array &$form, FormStateInterface $form_state): array {
     return $form['blocked'];
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     foreach (['open_time', 'close_time'] as $field) {
       $val = $form_state->getValue($field);
@@ -238,6 +259,9 @@ class BookingSettingsForm extends ConfigFormBase {
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $raw      = $form_state->getValue('services');
     $services = array_values(array_filter(array_map('trim', explode("\n", $raw))));

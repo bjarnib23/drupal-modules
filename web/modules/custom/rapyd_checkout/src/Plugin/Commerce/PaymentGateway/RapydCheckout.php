@@ -30,18 +30,35 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotificationsInterface {
 
+  /**
+   * The key repository for loading API credentials.
+   */
   protected KeyRepositoryInterface $keyRepository;
+
+  /**
+   * The HTTP client.
+   */
   protected ClientInterface $httpClient;
+
+  /**
+   * The logger channel.
+   */
   protected LoggerInterface $logger;
 
+  /**
+   * {@inheritdoc}
+   */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
+    $instance                = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->keyRepository = $container->get('key.repository');
     $instance->httpClient    = $container->get('http_client');
     $instance->logger        = $container->get('logger.channel.rapyd_checkout');
     return $instance;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function defaultConfiguration(): array {
     return [
       'access_key_id' => '',
@@ -49,6 +66,9 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     ] + parent::defaultConfiguration();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state): array {
     $form = parent::buildConfigurationForm($form, $form_state);
 
@@ -73,6 +93,9 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     return $form;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state): void {
     parent::submitConfigurationForm($form, $form_state);
     $values = $form_state->getValue($form['#parents']);
@@ -80,6 +103,12 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     $this->configuration['secret_key_id'] = $values['secret_key_id'];
   }
 
+  /**
+   * Builds a configured RapydClient instance using stored key IDs.
+   *
+   * @return \Drupal\rapyd_checkout\RapydClient
+   *   The configured Rapyd API client.
+   */
   public function getRapydClient(): RapydClient {
     $access_key = $this->keyRepository->getKey($this->configuration['access_key_id'])?->getKeyValue() ?? '';
     $secret_key = $this->keyRepository->getKey($this->configuration['secret_key_id'])?->getKeyValue() ?? '';
@@ -88,6 +117,9 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     return new RapydClient($access_key, $secret_key, $sandbox, $this->httpClient, $this->logger);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function onReturn(OrderInterface $order, Request $request): void {
     $checkout_id = $order->getData('rapyd_checkout_id');
     if (!$checkout_id) {
@@ -102,8 +134,8 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
       throw new PaymentGatewayException('Could not verify payment: ' . $e->getMessage(), 0, $e);
     }
 
-    $payment_status   = $data['payment']['status'] ?? '';
-    $checkout_status  = $data['status'] ?? '';
+    $payment_status  = $data['payment']['status'] ?? '';
+    $checkout_status = $data['status'] ?? '';
     if ($payment_status !== 'CLO' && $checkout_status !== 'DON') {
       throw new PaymentGatewayException('Payment not completed (checkout: ' . $checkout_status . ', payment: ' . $payment_status . ').');
     }
@@ -133,6 +165,9 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     $order->save();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function onNotify(Request $request): Response {
     $raw_body  = $request->getContent();
     $salt      = $request->headers->get('rapyd-idempotency', '');

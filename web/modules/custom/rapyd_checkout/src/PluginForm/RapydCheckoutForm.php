@@ -12,6 +12,9 @@ use Drupal\Core\Url;
  */
 class RapydCheckoutForm extends PaymentOffsiteForm {
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state): array {
     $form = parent::buildConfigurationForm($form, $form_state);
 

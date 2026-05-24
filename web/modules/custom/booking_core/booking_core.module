@@ -5,16 +5,18 @@
  * Hooks and procedural code for the Booking Core module.
  */
 
+use Drupal\Core\Datetime\DrupalDateTime;
+
 /**
  * Implements hook_mail().
  */
 function booking_core_mail(string $key, array &$message, array $params): void {
-  $config    = \Drupal::config('booking_core.settings');
-  $company   = \Drupal::config('system.site')->get('name') ?: 'Us';
-  $site_tz   = \Drupal::config('system.date')->get('timezone.default') ?: 'UTC';
-  $dt        = new \Drupal\Core\Datetime\DrupalDateTime($params['date'], 'UTC');
+  $config  = \Drupal::config('booking_core.settings');
+  $company = \Drupal::config('system.site')->get('name') ?: 'Us';
+  $site_tz = \Drupal::config('system.date')->get('timezone.default') ?: 'UTC';
+  $dt      = new DrupalDateTime($params['date'], 'UTC');
   $dt->setTimezone(new \DateTimeZone($site_tz));
-  $date_fmt  = $dt->format('l j F Y \a\t H:i');
+  $date_fmt = $dt->format('l j F Y \a\t H:i');
 
   switch ($key) {
     case 'confirmation':
@@ -36,12 +38,12 @@ function booking_core_mail(string $key, array &$message, array $params): void {
         '@service' => $params['service'],
       ]);
       $message['body'][] = t('A new booking has been submitted:');
-      $message['body'][] = t('Name: @v',    ['@v' => $params['name']]);
-      $message['body'][] = t('Email: @v',   ['@v' => $params['email']]);
-      $message['body'][] = t('Phone: @v',   ['@v' => $params['phone'] ?: '—']);
+      $message['body'][] = t('Name: @v', ['@v' => $params['name']]);
+      $message['body'][] = t('Email: @v', ['@v' => $params['email']]);
+      $message['body'][] = t('Phone: @v', ['@v' => $params['phone'] ?: '—']);
       $message['body'][] = t('Service: @v', ['@v' => $params['service']]);
-      $message['body'][] = t('Date: @v',    ['@v' => $date_fmt]);
-      $message['body'][] = t('Notes: @v',   ['@v' => $params['notes'] ?: '—']);
+      $message['body'][] = t('Date: @v', ['@v' => $date_fmt]);
+      $message['body'][] = t('Notes: @v', ['@v' => $params['notes'] ?: '—']);
       break;
   }
 }

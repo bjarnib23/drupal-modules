@@ -19,11 +19,36 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class BookingForm extends FormBase {
 
+  /**
+   * The entity type manager.
+   */
   protected EntityTypeManagerInterface $entityTypeManager;
+
+  /**
+   * The mail manager.
+   */
   protected MailManagerInterface $mailManager;
+
+  /**
+   * The lock backend.
+   */
   protected LockBackendInterface $lock;
+
+  /**
+   * The flood service.
+   */
   protected FloodInterface $flood;
+
+  /**
+   * The booking slot service.
+   */
   protected BookingSlotService $slotService;
+
+  /**
+   * The logger channel.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
   protected $logger;
 
   public function __construct(
@@ -38,12 +63,15 @@ class BookingForm extends FormBase {
     $this->entityTypeManager = $entity_type_manager;
     $this->mailManager       = $mail_manager;
     $this->setConfigFactory($config_factory);
-    $this->lock              = $lock;
-    $this->flood             = $flood;
-    $this->slotService       = $slot_service;
-    $this->logger            = $logger_factory->get('booking_core');
+    $this->lock        = $lock;
+    $this->flood       = $flood;
+    $this->slotService = $slot_service;
+    $this->logger      = $logger_factory->get('booking_core');
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('entity_type.manager'),
@@ -56,10 +84,16 @@ class BookingForm extends FormBase {
     );
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getFormId(): string {
     return 'booking_core_booking_form';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config   = $this->configFactory()->get('booking_core.settings');
     $services = $config->get('services') ?? [];
@@ -136,10 +170,16 @@ class BookingForm extends FormBase {
     return $form;
   }
 
+  /**
+   * AJAX callback to refresh the time slot select element.
+   */
   public function updateTimeSlots(array &$form, FormStateInterface $form_state): array {
     return $form['time'];
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     $ip = $this->getRequest()->getClientIp();
     if (!$this->flood->isAllowed('booking_core_submit', 5, 3600, $ip)) {
@@ -161,6 +201,9 @@ class BookingForm extends FormBase {
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $ip = $this->getRequest()->getClientIp();
     $this->flood->register('booking_core_submit', 3600, $ip);

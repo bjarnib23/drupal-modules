@@ -11,6 +11,9 @@ use Drupal\Core\Entity\EntityListBuilder;
  */
 class BookingListBuilder extends EntityListBuilder {
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildHeader(): array {
     $header['name'] = [
       'data'      => $this->t('Name'),
@@ -36,6 +39,9 @@ class BookingListBuilder extends EntityListBuilder {
     return $header + parent::buildHeader();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getDefaultOperations(EntityInterface $entity): array {
     $operations = [];
 
@@ -58,6 +64,9 @@ class BookingListBuilder extends EntityListBuilder {
     return $operations;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildRow(EntityInterface $entity): array {
     /** @var \Drupal\booking_core\BookingInterface $entity */
     $row['name']    = $entity->getName();
@@ -67,6 +76,9 @@ class BookingListBuilder extends EntityListBuilder {
     return $row + parent::buildRow($entity);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getEntityIds(): array {
     $allowed = ['name', 'email', 'service', 'date'];
 
@@ -82,6 +94,9 @@ class BookingListBuilder extends EntityListBuilder {
       ->execute();
   }
 
+  /**
+   * Formats a UTC datetime string for display in the site timezone.
+   */
   private function formatDate(string $date): string {
     $site_tz = \Drupal::config('system.date')->get('timezone.default') ?: 'UTC';
     $dt      = new DrupalDateTime($date, 'UTC');

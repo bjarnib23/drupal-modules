@@ -18,7 +18,11 @@ class BookingSlotService {
   /**
    * Returns available time slots for a given date.
    *
-   * @return array<string, string> Keyed by time string (H:i), e.g. ['09:00' => '09:00']
+   * @param string|null $date
+   *   Date string in Y-m-d format.
+   *
+   * @return array<string, string>
+   *   Keyed by time string (H:i), e.g. ['09:00' => '09:00'].
    */
   public function getAvailableSlots(?string $date): array {
     if (!$date) {
@@ -67,7 +71,11 @@ class BookingSlotService {
   /**
    * Returns booked time strings (H:i) for a given date.
    *
+   * @param string $date
+   *   Date string in Y-m-d format.
+   *
    * @return string[]
+   *   Array of booked time strings in H:i format.
    */
   public function getBookedTimes(string $date): array {
     $ids = $this->entityTypeManager->getStorage('booking')->getQuery()
@@ -88,11 +96,23 @@ class BookingSlotService {
   }
 
   /**
-   * Generates all slots between open and close time, excluding booked/blocked ones.
+   * Generates all slots between open and close time, excluding booked/blocked.
    *
+   * @param string $date
+   *   Date string in Y-m-d format.
+   * @param string $open_time
+   *   Opening time in H:i format.
+   * @param string $close_time
+   *   Closing time in H:i format.
+   * @param int $slot_duration
+   *   Slot duration in minutes.
    * @param string[] $booked_times
+   *   Array of already-booked time strings in H:i format.
    * @param array<array{start: string, end: string}> $blocked_ranges
+   *   Array of blocked time ranges with 'start' and 'end' keys.
+   *
    * @return array<string, string>
+   *   Available slots keyed by time string (H:i).
    */
   public function generateSlots(string $date, string $open_time, string $close_time, int $slot_duration, array $booked_times = [], array $blocked_ranges = []): array {
     $utc    = new \DateTimeZone('UTC');
@@ -114,7 +134,13 @@ class BookingSlotService {
   /**
    * Returns TRUE if the given time falls within any blocked range.
    *
+   * @param string $time
+   *   Time string in H:i format.
    * @param array<array{start: string, end: string}> $blocked_ranges
+   *   Array of blocked time ranges with 'start' and 'end' keys.
+   *
+   * @return bool
+   *   TRUE if the time is within a blocked range.
    */
   private function isBlocked(string $time, array $blocked_ranges): bool {
     foreach ($blocked_ranges as $range) {

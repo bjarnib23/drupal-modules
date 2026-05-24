@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Drupal custom modules">
+  <rule ref="Drupal"/>
+  <file>web/modules/custom</file>
+  <!-- JS files use lowercase true/false/null per ECMAScript spec. -->
+  <rule ref="Generic.PHP.UpperCaseConstant">
+    <exclude-pattern>*.js</exclude-pattern>
+  </rule>
+</ruleset>

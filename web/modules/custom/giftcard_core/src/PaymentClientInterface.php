@@ -13,11 +13,16 @@ interface PaymentClientInterface {
   /**
    * Creates a hosted checkout session and returns the redirect URL.
    *
-   * @param int    $amount      Amount in the smallest currency unit.
-   * @param string $currency    ISO 4217 currency code.
-   * @param string $country     ISO 3166-1 alpha-2 country code.
-   * @param string $completeUrl Absolute URL to redirect to after payment.
-   * @param string $cancelUrl   Absolute URL to redirect to on cancellation.
+   * @param int $amount
+   *   Amount in the smallest currency unit.
+   * @param string $currency
+   *   ISO 4217 currency code.
+   * @param string $country
+   *   ISO 3166-1 alpha-2 country code.
+   * @param string $completeUrl
+   *   Absolute URL to redirect to after payment.
+   * @param string $cancelUrl
+   *   Absolute URL to redirect to on cancellation.
    *
    * @return array{redirect_url: string, payment_id: string}|null
    *   Array with redirect URL and payment ID, or NULL on failure.
@@ -29,13 +34,19 @@ interface PaymentClientInterface {
    *
    * Always call this before trusting any webhook payload.
    *
-   * @param string $body      Raw request body.
-   * @param string $salt      Value of the rapyd-idempotency request header.
-   * @param string $timestamp Value of the rapyd-timestamp request header.
-   * @param string $signature Value of the rapyd-signature request header.
-   * @param string $path      The request path (e.g. /gift-card/webhook).
+   * @param string $body
+   *   Raw request body.
+   * @param string $salt
+   *   Value of the rapyd-idempotency request header.
+   * @param string $timestamp
+   *   Value of the rapyd-timestamp request header.
+   * @param string $signature
+   *   Value of the rapyd-signature request header.
+   * @param string $path
+   *   The request path (e.g. /gift-card/webhook).
    *
-   * @return bool TRUE if the signature is valid.
+   * @return bool
+   *   TRUE if the signature is valid.
    */
   public function verifyWebhookSignature(string $body, string $salt, string $timestamp, string $signature, string $path): bool;
 

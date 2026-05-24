@@ -22,6 +22,9 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('giftcard_core')]
 class RapydClientTest extends UnitTestCase {
 
+  /**
+   * Builds a RapydClient with mocked credentials.
+   */
   private function makeClient(string $access = 'acc', string $secret = 'sec'): RapydClient {
     $accessKey = $this->createMock(KeyInterface::class);
     $accessKey->method('getKeyValue')->willReturn($access);
@@ -56,6 +59,9 @@ class RapydClientTest extends UnitTestCase {
     );
   }
 
+  /**
+   * Builds a RapydClient with empty (unconfigured) key IDs.
+   */
   private function makeEmptyKeysClient(): RapydClient {
     $settings = $this->createMock(ImmutableConfig::class);
     $settings->method('get')->willReturnMap([
@@ -79,11 +85,17 @@ class RapydClientTest extends UnitTestCase {
     );
   }
 
+  /**
+   * Tests that signature verification fails when API keys are not configured.
+   */
   public function testVerifyWebhookReturnsFalseWithEmptyKeys(): void {
     $client = $this->makeEmptyKeysClient();
     $this->assertFalse($client->verifyWebhookSignature('body', 'salt', '123', 'sig', '/path'));
   }
 
+  /**
+   * Tests that a correctly computed signature is accepted.
+   */
   public function testVerifyWebhookValidSignature(): void {
     $access    = 'my_access';
     $secret    = 'my_secret';
@@ -99,6 +111,9 @@ class RapydClientTest extends UnitTestCase {
     $this->assertTrue($client->verifyWebhookSignature($raw_body, $salt, $timestamp, $signature, $path));
   }
 
+  /**
+   * Tests that a tampered or incorrect signature is rejected.
+   */
   public function testVerifyWebhookInvalidSignature(): void {
     $client = $this->makeClient('acc', 'sec');
     $this->assertFalse($client->verifyWebhookSignature('body', 'salt', '123', 'wrong_sig', '/path'));

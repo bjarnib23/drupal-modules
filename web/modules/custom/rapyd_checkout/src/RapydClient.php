@@ -11,6 +11,9 @@ use Psr\Log\LoggerInterface;
  */
 class RapydClient {
 
+  /**
+   * The Rapyd API base URL (sandbox or live).
+   */
   private string $baseUrl;
 
   public function __construct(
@@ -29,6 +32,7 @@ class RapydClient {
    * Creates a Rapyd Hosted Checkout page and returns the redirect URL.
    *
    * @return array{redirect_url: string, checkout_id: string}
+   *   Redirect URL and checkout ID from Rapyd.
    *
    * @throws \RuntimeException
    */
@@ -76,7 +80,8 @@ class RapydClient {
   /**
    * Fetches the status of a checkout page by ID.
    *
-   * @return array Decoded Rapyd checkout data.
+   * @return array
+   *   Decoded Rapyd checkout data.
    *
    * @throws \RuntimeException
    */
@@ -111,6 +116,19 @@ class RapydClient {
     return hash_equals($expected, $signature);
   }
 
+  /**
+   * Builds signed HMAC request headers for the Rapyd API.
+   *
+   * @param string $method
+   *   HTTP method in lowercase (e.g. 'get', 'post').
+   * @param string $path
+   *   API endpoint path (e.g. '/v1/checkout').
+   * @param string $body_str
+   *   JSON-encoded request body, empty string for GET requests.
+   *
+   * @return array<string, string>
+   *   Associative array of HTTP headers.
+   */
   private function buildHeaders(string $method, string $path, string $body_str = ''): array {
     $salt      = bin2hex(random_bytes(8));
     $timestamp = (string) time();

@@ -11,6 +11,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
  */
 class BookingCalendarController extends ControllerBase {
 
+  /**
+   * Returns the booking calendar page render array.
+   */
   public function page(): array {
     return [
       '#markup' => '<div id="booking-calendar"></div>',
@@ -25,6 +28,9 @@ class BookingCalendarController extends ControllerBase {
     ];
   }
 
+  /**
+   * Returns bookings and blocked periods as a FullCalendar JSON feed.
+   */
   public function feed(): JsonResponse {
     $ids = $this->entityTypeManager()->getStorage('booking')->getQuery()
       ->accessCheck(FALSE)
@@ -59,10 +65,10 @@ class BookingCalendarController extends ControllerBase {
       ];
       if (!empty($period['all_day'])) {
         // FullCalendar all-day end is exclusive, so add one day.
-        $end_dt      = new \DateTime($period['date']);
+        $end_dt = new \DateTime($period['date']);
         $end_dt->modify('+1 day');
-        $event['start'] = $period['date'];
-        $event['end']   = $end_dt->format('Y-m-d');
+        $event['start']  = $period['date'];
+        $event['end']    = $end_dt->format('Y-m-d');
         $event['allDay'] = TRUE;
       }
       else {

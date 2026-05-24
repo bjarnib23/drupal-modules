@@ -16,6 +16,9 @@ use Psr\Log\LoggerInterface;
 #[Group('rapyd_checkout')]
 class RapydClientTest extends UnitTestCase {
 
+  /**
+   * Builds a RapydClient with the given credentials.
+   */
   private function makeClient(string $access = 'acc', string $secret = 'sec', bool $sandbox = TRUE): RapydClient {
     return new RapydClient(
       $access,
@@ -26,11 +29,17 @@ class RapydClientTest extends UnitTestCase {
     );
   }
 
+  /**
+   * Tests that signature verification fails when API keys are empty.
+   */
   public function testVerifyWebhookReturnsFalseWithEmptyKeys(): void {
     $client = $this->makeClient('', '');
     $this->assertFalse($client->verifyWebhook('body', 'salt', '123', 'sig', '/path'));
   }
 
+  /**
+   * Tests that a correctly computed HMAC signature is accepted.
+   */
   public function testVerifyWebhookValidSignature(): void {
     $access    = 'my_access';
     $secret    = 'my_secret';
@@ -46,11 +55,17 @@ class RapydClientTest extends UnitTestCase {
     $this->assertTrue($client->verifyWebhook($raw_body, $salt, $timestamp, $signature, $path));
   }
 
+  /**
+   * Tests that an incorrect signature is rejected.
+   */
   public function testVerifyWebhookInvalidSignature(): void {
     $client = $this->makeClient('acc', 'sec');
     $this->assertFalse($client->verifyWebhook('body', 'salt', '123', 'wrong_signature', '/path'));
   }
 
+  /**
+   * Tests that sandbox mode does not bypass signature verification.
+   */
   public function testVerifyWebhookAlwaysVerifiesInSandboxMode(): void {
     // Sandbox mode must NOT bypass signature verification.
     $client = $this->makeClient('acc', 'sec', sandbox: TRUE);

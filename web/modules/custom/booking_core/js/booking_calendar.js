@@ -2,7 +2,9 @@
   Drupal.behaviors.bookingCalendar = {
     attach: function (context, settings) {
       const el = context.querySelector('#booking-calendar');
-      if (!el || el.dataset.calendarInitialized) return;
+      if (!el || el.dataset.calendarInitialized) {
+        return;
+      }
       el.dataset.calendarInitialized = true;
 
       const calendar = new FullCalendar.Calendar(el, {

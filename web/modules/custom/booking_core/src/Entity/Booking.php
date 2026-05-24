@@ -46,68 +46,113 @@ class Booking extends ContentEntityBase implements BookingInterface {
 
   use EntityChangedTrait;
 
+  /**
+   * {@inheritdoc}
+   */
   public function getName(): string {
     return $this->get('name')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setName(string $name): static {
     $this->set('name', $name);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getEmail(): string {
     return $this->get('email')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setEmail(string $email): static {
     $this->set('email', $email);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getPhone(): string {
     return $this->get('phone')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setPhone(string $phone): static {
     $this->set('phone', $phone);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getService(): string {
     return $this->get('service')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setService(string $service): static {
     $this->set('service', $service);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getDate(): string {
     return $this->get('date')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setDate(string $date): static {
     $this->set('date', $date);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getNotes(): string {
     return $this->get('notes')->value ?? '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setNotes(string $notes): static {
     $this->set('notes', $notes);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getCreatedTime(): int {
     return (int) $this->get('created')->value;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getChangedTime(): int {
     return (int) $this->get('changed')->value;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type): array {
     $fields = parent::baseFieldDefinitions($entity_type);
 
