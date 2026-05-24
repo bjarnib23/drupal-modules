@@ -88,6 +88,8 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       'configuration' => [
         'access_key_id' => 'test_access',
         'secret_key_id' => 'test_secret',
+        'currency'      => 'USD',
+        'country'       => 'US',
       ],
     ])->save();
   }

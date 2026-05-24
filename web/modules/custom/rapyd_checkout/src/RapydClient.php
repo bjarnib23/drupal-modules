@@ -31,12 +31,27 @@ class RapydClient {
   /**
    * Creates a Rapyd Hosted Checkout page and returns the redirect URL.
    *
+   * @param int $order_id
+   *   The Commerce order ID used as the merchant reference.
+   * @param int $amount
+   *   Amount in the smallest currency unit (e.g. cents or aurar).
+   * @param string $currency
+   *   ISO 4217 currency code (e.g. ISK, USD, EUR).
+   * @param string $country
+   *   ISO 3166-1 alpha-2 country code (e.g. IS, US, DE).
+   * @param string $email
+   *   The customer's email address.
+   * @param string $complete_url
+   *   Absolute URL to redirect to after successful payment.
+   * @param string $error_url
+   *   Absolute URL to redirect to on payment failure.
+   *
    * @return array{redirect_url: string, checkout_id: string}
    *   Redirect URL and checkout ID from Rapyd.
    *
    * @throws \RuntimeException
    */
-  public function createCheckout(int $order_id, int $amount, string $email, string $complete_url, string $error_url): array {
+  public function createCheckout(int $order_id, int $amount, string $currency, string $country, string $email, string $complete_url, string $error_url): array {
     if (empty($this->accessKey) || empty($this->secretKey)) {
       throw new \RuntimeException('Rapyd API credentials are not configured.');
     }
@@ -44,8 +59,8 @@ class RapydClient {
     $path     = '/v1/checkout';
     $body     = [
       'amount'                => $amount,
-      'currency'              => 'ISK',
-      'country'               => 'IS',
+      'currency'              => $currency,
+      'country'               => $country,
       'complete_payment_url'  => $complete_url,
       'error_payment_url'     => $error_url,
       'merchant_reference_id' => 'rapyd-order-' . $order_id,

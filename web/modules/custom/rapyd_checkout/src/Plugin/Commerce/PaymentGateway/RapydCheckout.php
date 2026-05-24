@@ -63,6 +63,8 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     return [
       'access_key_id' => '',
       'secret_key_id' => '',
+      'currency'      => '',
+      'country'       => '',
     ] + parent::defaultConfiguration();
   }
 
@@ -90,6 +92,26 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
       '#required'      => TRUE,
     ];
 
+    $form['currency'] = [
+      '#type'          => 'textfield',
+      '#title'         => $this->t('Currency code'),
+      '#description'   => $this->t('ISO 4217 currency code supported by your Rapyd account, e.g. USD, EUR, ISK.'),
+      '#default_value' => $this->configuration['currency'],
+      '#required'      => TRUE,
+      '#size'          => 6,
+      '#maxlength'     => 3,
+    ];
+
+    $form['country'] = [
+      '#type'          => 'textfield',
+      '#title'         => $this->t('Country code'),
+      '#description'   => $this->t('ISO 3166-1 alpha-2 country code for your Rapyd account, e.g. US, DE, IS.'),
+      '#default_value' => $this->configuration['country'],
+      '#required'      => TRUE,
+      '#size'          => 4,
+      '#maxlength'     => 2,
+    ];
+
     return $form;
   }
 
@@ -101,6 +123,8 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements SupportsNotific
     $values = $form_state->getValue($form['#parents']);
     $this->configuration['access_key_id'] = $values['access_key_id'];
     $this->configuration['secret_key_id'] = $values['secret_key_id'];
+    $this->configuration['currency']      = strtoupper(trim($values['currency']));
+    $this->configuration['country']       = strtoupper(trim($values['country']));
   }
 
   /**

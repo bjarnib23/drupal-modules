@@ -36,10 +36,14 @@ class RapydCheckoutForm extends PaymentOffsiteForm {
       'step'           => 'payment',
     ], ['absolute' => TRUE])->toString();
 
+    $gateway_config = $gateway->getConfiguration();
+
     try {
       $result = $client->createCheckout(
         (int) $order->id(),
         (int) $order->getTotalPrice()->getNumber(),
+        $gateway_config['currency'],
+        $gateway_config['country'],
         $order->getEmail() ?? '',
         $return_url,
         $cancel_url,
