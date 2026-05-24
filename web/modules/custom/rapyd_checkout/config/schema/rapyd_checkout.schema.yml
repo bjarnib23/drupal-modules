@@ -1,4 +1,4 @@
-commerce_payment_gateway.plugin.rapyd_checkout:
+commerce_payment.commerce_payment_gateway.plugin.rapyd_checkout:
   type: commerce_payment_gateway_configuration
   label: 'Rapyd Checkout configuration'
   mapping:
