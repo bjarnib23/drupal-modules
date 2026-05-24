@@ -54,7 +54,7 @@ class RapydClient implements PaymentClientInterface {
       'complete_checkout_url' => $completeUrl,
       'cancel_checkout_url'   => $cancelUrl,
       'language'              => $this->languageManager->getCurrentLanguage()->getId(),
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     $response = $this->request('POST', '/v1/checkout', $body);
 
