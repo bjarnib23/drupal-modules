@@ -12,10 +12,27 @@ use Drupal\Core\Entity\EntityListBuilder;
 class BookingListBuilder extends EntityListBuilder {
 
   public function buildHeader(): array {
-    $header['name']    = $this->t('Name');
-    $header['email']   = $this->t('Email');
-    $header['service'] = $this->t('Service');
-    $header['date']    = $this->t('Date');
+    $header['name'] = [
+      'data'      => $this->t('Name'),
+      'specifier' => 'name',
+      'field'     => 'name',
+    ];
+    $header['email'] = [
+      'data'      => $this->t('Email'),
+      'specifier' => 'email',
+      'field'     => 'email',
+    ];
+    $header['service'] = [
+      'data'      => $this->t('Service'),
+      'specifier' => 'service',
+      'field'     => 'service',
+    ];
+    $header['date'] = [
+      'data'      => $this->t('Date'),
+      'specifier' => 'date',
+      'field'     => 'date',
+      'sort'      => 'asc',
+    ];
     return $header + parent::buildHeader();
   }
 
@@ -51,8 +68,16 @@ class BookingListBuilder extends EntityListBuilder {
   }
 
   protected function getEntityIds(): array {
+    $allowed = ['name', 'email', 'service', 'date'];
+
+    $order = \Drupal::request()->query->get('order', 'date');
+    $sort  = \Drupal::request()->query->get('sort', 'asc');
+
+    $field     = in_array($order, $allowed, TRUE) ? $order : 'date';
+    $direction = strtolower($sort) === 'desc' ? 'DESC' : 'ASC';
+
     return $this->getStorage()->getQuery()
-      ->sort('date', 'ASC')
+      ->sort($field, $direction)
       ->accessCheck(FALSE)
       ->execute();
   }

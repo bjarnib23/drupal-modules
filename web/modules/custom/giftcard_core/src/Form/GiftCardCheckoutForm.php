@@ -6,7 +6,6 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Url;
 use Drupal\giftcard_core\GiftCardService;
 use Drupal\giftcard_core\PaymentClientInterface;
@@ -32,8 +31,6 @@ class GiftCardCheckoutForm extends FormBase {
    *   The payment client.
    * @param \Drupal\Core\Flood\FloodInterface $flood
    *   The flood service.
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
-   *   The logger channel factory.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory.
    */
@@ -41,7 +38,6 @@ class GiftCardCheckoutForm extends FormBase {
     private readonly GiftCardService $giftCardService,
     private readonly PaymentClientInterface $paymentClient,
     private readonly FloodInterface $flood,
-    private readonly LoggerChannelFactoryInterface $loggerFactory,
     ConfigFactoryInterface $configFactory,
   ) {
     $this->setConfigFactory($configFactory);
@@ -55,7 +51,6 @@ class GiftCardCheckoutForm extends FormBase {
       $container->get('giftcard_core.gift_card_service'),
       $container->get('giftcard_core.payment_client'),
       $container->get('flood'),
-      $container->get('logger.factory'),
       $container->get('config.factory'),
     );
   }
@@ -190,7 +185,7 @@ class GiftCardCheckoutForm extends FormBase {
     );
 
     if ($session === NULL) {
-      $this->loggerFactory->get('giftcard_core')->error('Failed to create payment checkout session.');
+      $this->logger('giftcard_core')->error('Failed to create payment checkout session.');
       $this->messenger()->addError($this->t('The payment gateway is unavailable. Please try again later.'));
       return;
     }

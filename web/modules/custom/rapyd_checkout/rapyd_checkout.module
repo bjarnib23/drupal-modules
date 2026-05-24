@@ -1,0 +1,6 @@
+<?php
+
+/**
+ * @file
+ * Rapyd Hosted Checkout payment gateway for Drupal Commerce.
+ */

@@ -76,13 +76,15 @@ class RapydClient implements PaymentClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function verifyWebhookSignature(string $body, string $signature): bool {
+  public function verifyWebhookSignature(string $body, string $salt, string $timestamp, string $signature, string $path): bool {
+    $access = $this->getAccess();
     $secret = $this->getSecret();
-    if ($secret === NULL) {
+    if ($access === NULL || $secret === NULL) {
       return FALSE;
     }
 
-    $expected = base64_encode(hash_hmac('sha256', $body, $secret, TRUE));
+    $toSign   = 'post' . $path . $salt . $timestamp . $access . $secret . $body;
+    $expected = base64_encode(hash_hmac('sha256', $toSign, $secret));
     return hash_equals($expected, $signature);
   }
 
