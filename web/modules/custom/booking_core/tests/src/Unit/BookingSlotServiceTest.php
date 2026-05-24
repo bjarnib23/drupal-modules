@@ -51,4 +51,30 @@ class BookingSlotServiceTest extends UnitTestCase {
     $this->assertArrayHasKey('09:30', $slots);
   }
 
+  public function testBlockedRangeExcludesOverlappingSlots(): void {
+    $service = $this->makeService();
+    $blocked = [['start' => '10:00', 'end' => '12:00']];
+    $slots   = $service->generateSlots('2099-06-02', '09:00', '13:00', 60, [], $blocked);
+
+    $this->assertArrayHasKey('09:00', $slots);
+    $this->assertArrayNotHasKey('10:00', $slots);
+    $this->assertArrayNotHasKey('11:00', $slots);
+    $this->assertArrayHasKey('12:00', $slots);
+  }
+
+  public function testMultipleBlockedRangesExcludeCorrectSlots(): void {
+    $service = $this->makeService();
+    $blocked = [
+      ['start' => '09:00', 'end' => '10:00'],
+      ['start' => '12:00', 'end' => '13:00'],
+    ];
+    $slots = $service->generateSlots('2099-06-02', '09:00', '14:00', 60, [], $blocked);
+
+    $this->assertArrayNotHasKey('09:00', $slots);
+    $this->assertArrayHasKey('10:00', $slots);
+    $this->assertArrayHasKey('11:00', $slots);
+    $this->assertArrayNotHasKey('12:00', $slots);
+    $this->assertArrayHasKey('13:00', $slots);
+  }
+
 }
