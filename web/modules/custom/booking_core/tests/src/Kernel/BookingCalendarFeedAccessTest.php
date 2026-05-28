@@ -4,6 +4,7 @@ namespace Drupal\Tests\booking_core\Kernel;
 
 use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Verifies that calendar feed routes enforce the correct permissions.
@@ -11,6 +12,7 @@ use PHPUnit\Framework\Attributes\Group;
  * @group booking_core
  */
 #[Group('booking_core')]
+#[RunTestsInSeparateProcesses]
 class BookingCalendarFeedAccessTest extends EntityKernelTestBase {
 
   /**

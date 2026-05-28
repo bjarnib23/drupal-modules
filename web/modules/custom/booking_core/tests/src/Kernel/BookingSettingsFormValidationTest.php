@@ -7,6 +7,7 @@ use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use Drupal\booking_core\Form\BookingSettingsForm;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Kernel tests for BookingSettingsForm validation.
@@ -15,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[CoversClass(BookingSettingsForm::class)]
 #[Group('booking_core')]
+#[RunTestsInSeparateProcesses]
 class BookingSettingsFormValidationTest extends EntityKernelTestBase {
 
   /**

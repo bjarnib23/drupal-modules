@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\booking_core\BookingInterface;
 use Drupal\booking_core\Form\BookingForm;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Kernel tests for BookingForm: flood control and mail dispatch.
@@ -14,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * @group booking_core
  */
 #[Group('booking_core')]
+#[RunTestsInSeparateProcesses]
 class BookingFormKernelTest extends EntityKernelTestBase {
 
   /**
@@ -42,6 +44,13 @@ class BookingFormKernelTest extends EntityKernelTestBase {
    */
   private function nextMonday(): string {
     return (new \DateTime('next Monday'))->format('Y-m-d');
+  }
+
+  /**
+   * Returns the next Sunday as a Y-m-d string.
+   */
+  private function nextSunday(): string {
+    return (new \DateTime('next Sunday'))->format('Y-m-d');
   }
 
   /**
@@ -107,6 +116,56 @@ class BookingFormKernelTest extends EntityKernelTestBase {
     $keys = array_column($mails, 'key');
     $this->assertContains('confirmation', $keys);
     $this->assertContains('notification', $keys);
+  }
+
+  /**
+   * Submitting a closed day (Sunday) sets an error on the date field.
+   */
+  public function testClosedDaySetsDateError(): void {
+    $this->config('booking_core.settings')
+      ->set('services', ['Test service'])
+      ->set('open_days', [1, 2, 3, 4, 5])
+      ->save();
+
+    $form_state = (new FormState())->setValues([
+      'name'    => 'Test User',
+      'email'   => 'test@example.com',
+      'phone'   => '',
+      'service' => 'Test service',
+      'date'    => $this->nextSunday(),
+      'time'    => '10:00',
+      'notes'   => '',
+    ]);
+
+    $this->container->get('form_builder')->submitForm(BookingForm::class, $form_state);
+
+    $this->assertArrayHasKey('date', $form_state->getErrors());
+  }
+
+  /**
+   * Submitting a valid date with a time outside business hours sets a time error.
+   */
+  public function testUnavailableTimeSetsTimeError(): void {
+    $this->config('booking_core.settings')
+      ->set('services', ['Test service'])
+      ->set('open_days', [1, 2, 3, 4, 5])
+      ->set('open_time', '09:00')
+      ->set('close_time', '17:00')
+      ->save();
+
+    $form_state = (new FormState())->setValues([
+      'name'    => 'Test User',
+      'email'   => 'test@example.com',
+      'phone'   => '',
+      'service' => 'Test service',
+      'date'    => $this->nextMonday(),
+      'time'    => '22:00',
+      'notes'   => '',
+    ]);
+
+    $this->container->get('form_builder')->submitForm(BookingForm::class, $form_state);
+
+    $this->assertArrayHasKey('time', $form_state->getErrors());
   }
 
   /**
