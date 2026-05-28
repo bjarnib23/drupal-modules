@@ -1,14 +1,8 @@
 booking_calendar:
   js:
-    https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js:
-      type: external
+    js/fullcalendar.min.js:
       minified: true
     js/booking_calendar.js: {}
-  css:
-    theme:
-      https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css:
-        type: external
-        minified: true
-      css/booking_calendar.css: {}
   dependencies:
     - core/drupalSettings
+    - core/once

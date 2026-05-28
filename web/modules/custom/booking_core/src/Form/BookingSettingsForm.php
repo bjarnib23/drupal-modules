@@ -29,8 +29,8 @@ class BookingSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config   = $this->config('booking_core.settings');
-    $services = $config->get('services') ?? [];
-    $days     = $config->get('open_days') ?? [1, 2, 3, 4, 5];
+    $services = $config->get('services');
+    $days     = $config->get('open_days');
 
     $form['company_name_notice'] = [
       '#type'   => 'item',
@@ -40,7 +40,7 @@ class BookingSettingsForm extends ConfigFormBase {
     $form['admin_email'] = [
       '#type'          => 'email',
       '#title'         => $this->t('Admin notification email'),
-      '#default_value' => $config->get('admin_email') ?? '',
+      '#default_value' => $config->get('admin_email'),
     ];
 
     $form['services'] = [
@@ -75,7 +75,7 @@ class BookingSettingsForm extends ConfigFormBase {
       '#type'          => 'textfield',
       '#title'         => $this->t('Opening time'),
       '#description'   => $this->t('Format: HH:MM (e.g. 09:00)'),
-      '#default_value' => $config->get('open_time') ?? '09:00',
+      '#default_value' => $config->get('open_time'),
       '#size'          => 8,
     ];
 
@@ -83,7 +83,7 @@ class BookingSettingsForm extends ConfigFormBase {
       '#type'          => 'textfield',
       '#title'         => $this->t('Closing time'),
       '#description'   => $this->t('Format: HH:MM (e.g. 17:00)'),
-      '#default_value' => $config->get('close_time') ?? '17:00',
+      '#default_value' => $config->get('close_time'),
       '#size'          => 8,
     ];
 
@@ -98,21 +98,44 @@ class BookingSettingsForm extends ConfigFormBase {
         90  => $this->t('1.5 hours'),
         120 => $this->t('2 hours'),
       ],
-      '#default_value' => $config->get('slot_duration') ?? 30,
+      '#default_value' => $config->get('slot_duration'),
     ];
 
     $form['hours']['weeks_ahead'] = [
       '#type'          => 'number',
       '#title'         => $this->t('Weeks ahead'),
       '#description'   => $this->t('How many weeks ahead customers can book.'),
-      '#default_value' => $config->get('weeks_ahead') ?? 4,
+      '#default_value' => $config->get('weeks_ahead'),
       '#min'           => 1,
       '#max'           => 52,
     ];
 
+    $form['flood'] = [
+      '#type'  => 'fieldset',
+      '#title' => $this->t('Flood protection'),
+    ];
+
+    $form['flood']['flood_limit'] = [
+      '#type'          => 'number',
+      '#title'         => $this->t('Max booking attempts'),
+      '#description'   => $this->t('Maximum number of booking submissions allowed per IP within the flood window.'),
+      '#default_value' => $config->get('flood_limit'),
+      '#min'           => 1,
+      '#max'           => 100,
+    ];
+
+    $form['flood']['flood_window'] = [
+      '#type'          => 'number',
+      '#title'         => $this->t('Flood window (seconds)'),
+      '#description'   => $this->t('Time window in seconds for the attempt limit. 3600 = 1 hour.'),
+      '#default_value' => $config->get('flood_window'),
+      '#min'           => 60,
+      '#max'           => 86400,
+    ];
+
     // ---- Blocked periods ----
     if ($form_state->get('blocked_periods') === NULL) {
-      $form_state->set('blocked_periods', $config->get('blocked_periods') ?? []);
+      $form_state->set('blocked_periods', $config->get('blocked_periods'));
     }
     $periods = $form_state->get('blocked_periods');
     $removed = $form_state->get('blocked_removed') ?? [];
@@ -246,14 +269,31 @@ class BookingSettingsForm extends ConfigFormBase {
       if (in_array($i, $removed)) {
         continue;
       }
+
       if (empty($row['date'])) {
         $form_state->setError($form['blocked']['table'][$i]['date'], $this->t('Date is required for each blocked period.'));
+        continue;
       }
+
+      $parsed = \DateTime::createFromFormat('Y-m-d', $row['date']);
+      if (!$parsed || $parsed->format('Y-m-d') !== $row['date']) {
+        $form_state->setError($form['blocked']['table'][$i]['date'], $this->t('The blocked period date is not valid.'));
+        continue;
+      }
+
+      if ($parsed->format('Y-m-d') < (new \DateTime('today'))->format('Y-m-d')) {
+        $form_state->setError($form['blocked']['table'][$i]['date'], $this->t('The blocked period date cannot be in the past.'));
+      }
+
       if (empty($row['all_day'])) {
         foreach (['start_time', 'end_time'] as $tf) {
           if (!empty($row[$tf]) && !preg_match('/^\d{2}:\d{2}$/', $row[$tf])) {
             $form_state->setError($form['blocked']['table'][$i][$tf], $this->t('Time must be in HH:MM format.'));
           }
+        }
+
+        if (!empty($row['start_time']) && !empty($row['end_time']) && $row['start_time'] >= $row['end_time']) {
+          $form_state->setError($form['blocked']['table'][$i]['start_time'], $this->t('Start time must be before end time.'));
         }
       }
     }
@@ -291,6 +331,8 @@ class BookingSettingsForm extends ConfigFormBase {
       ->set('close_time', $form_state->getValue('close_time'))
       ->set('slot_duration', (int) $form_state->getValue('slot_duration'))
       ->set('weeks_ahead', (int) $form_state->getValue('weeks_ahead'))
+      ->set('flood_limit', (int) $form_state->getValue('flood_limit'))
+      ->set('flood_window', (int) $form_state->getValue('flood_window'))
       ->set('blocked_periods', $blocked)
       ->save();
 

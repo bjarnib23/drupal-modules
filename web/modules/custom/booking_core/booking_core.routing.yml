@@ -20,14 +20,14 @@ booking_core.calendar:
     _controller: '\Drupal\booking_core\Controller\BookingCalendarController::page'
     _title: 'Bookings Calendar'
   requirements:
-    _permission: 'administer bookings'
+    _permission: 'manage booking'
 
 booking_core.calendar_feed:
   path: '/admin/bookings/calendar/feed'
   defaults:
     _controller: '\Drupal\booking_core\Controller\BookingCalendarController::feed'
   requirements:
-    _permission: 'administer bookings'
+    _permission: 'manage booking'
 
 booking_core.settings:
   path: '/admin/config/booking-core/settings'
@@ -35,4 +35,4 @@ booking_core.settings:
     _form: '\Drupal\booking_core\Form\BookingSettingsForm'
     _title: 'Booking Settings'
   requirements:
-    _permission: 'administer site configuration'
+    _permission: 'administer booking'

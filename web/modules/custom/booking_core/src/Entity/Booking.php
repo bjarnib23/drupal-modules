@@ -30,7 +30,7 @@ use Drupal\booking_core\BookingInterface;
     ],
   ],
   base_table: 'booking',
-  admin_permission: 'administer bookings',
+  admin_permission: 'administer booking',
   entity_keys: [
     'id'    => 'id',
     'uuid'  => 'uuid',

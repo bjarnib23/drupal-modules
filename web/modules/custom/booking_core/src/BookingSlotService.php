@@ -10,6 +10,14 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
  */
 class BookingSlotService {
 
+  /**
+   * Constructs a BookingSlotService object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   */
   public function __construct(
     private ConfigFactoryInterface $configFactory,
     private EntityTypeManagerInterface $entityTypeManager,
@@ -30,11 +38,11 @@ class BookingSlotService {
     }
 
     $config        = $this->configFactory->get('booking_core.settings');
-    $open_days     = $config->get('open_days') ?? [1, 2, 3, 4, 5];
-    $open_time     = $config->get('open_time') ?? '09:00';
-    $close_time    = $config->get('close_time') ?? '17:00';
-    $slot_duration = (int) ($config->get('slot_duration') ?? 30);
-    $weeks_ahead   = (int) ($config->get('weeks_ahead') ?? 4);
+    $open_days     = $config->get('open_days');
+    $open_time     = $config->get('open_time');
+    $close_time    = $config->get('close_time');
+    $slot_duration = (int) $config->get('slot_duration');
+    $weeks_ahead   = (int) $config->get('weeks_ahead');
 
     $utc         = new \DateTimeZone('UTC');
     $dt          = new \DateTime($date . ' 00:00:00', $utc);
@@ -49,7 +57,7 @@ class BookingSlotService {
       return [];
     }
 
-    $blocked_periods = $config->get('blocked_periods') ?? [];
+    $blocked_periods = $config->get('blocked_periods');
     $blocked_ranges  = [];
     foreach ($blocked_periods as $period) {
       if (($period['date'] ?? '') !== $date) {
@@ -78,8 +86,14 @@ class BookingSlotService {
    *   Array of booked time strings in H:i format.
    */
   public function getBookedTimes(string $date): array {
+    $site_tz  = new \DateTimeZone($this->configFactory->get('system.date')->get('timezone.default') ?: 'UTC');
+    $utc      = new \DateTimeZone('UTC');
+    $start_dt = (new \DateTime($date . ' 00:00:00', $site_tz))->setTimezone($utc);
+    $end_dt   = (new \DateTime($date . ' 23:59:59', $site_tz))->setTimezone($utc);
+
     $ids = $this->entityTypeManager->getStorage('booking')->getQuery()
-      ->condition('date', $date . 'T', 'STARTS_WITH')
+      ->condition('date', $start_dt->format('Y-m-d\TH:i:s'), '>=')
+      ->condition('date', $end_dt->format('Y-m-d\TH:i:s'), '<=')
       ->accessCheck(FALSE)
       ->execute();
 
@@ -89,7 +103,10 @@ class BookingSlotService {
 
     $times = [];
     foreach ($this->entityTypeManager->getStorage('booking')->loadMultiple($ids) as $b) {
-      $times[] = substr($b->get('date')->value, 11, 5);
+      /** @var \Drupal\booking_core\BookingInterface $b */
+      $stored = new \DateTime($b->get('date')->value, $utc);
+      $stored->setTimezone($site_tz);
+      $times[] = $stored->format('H:i');
     }
 
     return $times;
@@ -114,7 +131,14 @@ class BookingSlotService {
    * @return array<string, string>
    *   Available slots keyed by time string (H:i).
    */
-  public function generateSlots(string $date, string $open_time, string $close_time, int $slot_duration, array $booked_times = [], array $blocked_ranges = []): array {
+  public function generateSlots(
+    string $date,
+    string $open_time,
+    string $close_time,
+    int $slot_duration,
+    array $booked_times = [],
+    array $blocked_ranges = [],
+  ): array {
     $utc    = new \DateTimeZone('UTC');
     $slots  = [];
     $cursor = new \DateTime($date . ' ' . $open_time, $utc);

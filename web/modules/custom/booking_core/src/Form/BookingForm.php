@@ -3,6 +3,7 @@
 namespace Drupal\booking_core\Form;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
@@ -51,6 +52,24 @@ class BookingForm extends FormBase {
    */
   protected $logger;
 
+  /**
+   * Constructs a BookingForm object.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\Core\Mail\MailManagerInterface $mail_manager
+   *   The mail manager.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
+   * @param \Drupal\Core\Lock\LockBackendInterface $lock
+   *   The lock backend.
+   * @param \Drupal\Core\Flood\FloodInterface $flood
+   *   The flood service.
+   * @param \Drupal\booking_core\BookingSlotService $slot_service
+   *   The booking slot service.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger factory.
+   */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     MailManagerInterface $mail_manager,
@@ -96,8 +115,11 @@ class BookingForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config   = $this->configFactory()->get('booking_core.settings');
-    $services = $config->get('services') ?? [];
+    $services = $config->get('services');
     $options  = array_combine($services, $services);
+
+    $site_tz  = $this->configFactory()->get('system.date')->get('timezone.default') ?: 'UTC';
+    $tomorrow = new DrupalDateTime('+1 day', new \DateTimeZone($site_tz));
 
     $form['name'] = [
       '#type'      => 'textfield',
@@ -130,7 +152,7 @@ class BookingForm extends FormBase {
       '#type'       => 'date',
       '#title'      => $this->t('Date'),
       '#required'   => TRUE,
-      '#attributes' => ['min' => date('Y-m-d', strtotime('+1 day'))],
+      '#attributes' => ['min' => $tomorrow->format('Y-m-d')],
       '#ajax'       => [
         'callback'        => '::updateTimeSlots',
         'wrapper'         => 'time-wrapper',
@@ -181,8 +203,11 @@ class BookingForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
+    $config      = $this->configFactory()->get('booking_core.settings');
+    $flood_limit = (int) $config->get('flood_limit');
+    $flood_window = (int) $config->get('flood_window');
     $ip = $this->getRequest()->getClientIp();
-    if (!$this->flood->isAllowed('booking_core_submit', 5, 3600, $ip)) {
+    if (!$this->flood->isAllowed('booking_core_submit', $flood_limit, $flood_window, $ip)) {
       $form_state->setErrorByName('', $this->t('Too many booking attempts. Please try again later.'));
       return;
     }
@@ -205,13 +230,22 @@ class BookingForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
-    $ip = $this->getRequest()->getClientIp();
-    $this->flood->register('booking_core_submit', 3600, $ip);
+    $config       = $this->configFactory()->get('booking_core.settings');
+    $flood_window = (int) $config->get('flood_window');
+    $ip           = $this->getRequest()->getClientIp();
+    $this->flood->register('booking_core_submit', $flood_window, $ip);
 
-    $date     = $form_state->getValue('date');
-    $time     = $form_state->getValue('time');
-    $iso      = $date . 'T' . $time . ':00';
-    $lock_key = 'booking_core_slot_' . md5($iso);
+    $date    = $form_state->getValue('date');
+    $time    = $form_state->getValue('time');
+    $site_tz = $this->configFactory()->get('system.date')->get('timezone.default') ?: 'UTC';
+    $dt      = DrupalDateTime::createFromFormat(
+      'Y-m-d\TH:i:s',
+      $date . 'T' . $time . ':00',
+      new \DateTimeZone($site_tz),
+    );
+    $dt->setTimezone(new \DateTimeZone('UTC'));
+    $iso      = $dt->format('Y-m-d\TH:i:s');
+    $lock_key = 'booking_core_slot_' . $iso;
 
     if (!$this->lock->acquire($lock_key, 15)) {
       $this->messenger()->addError($this->t('That slot is currently being booked. Please try again.'));
