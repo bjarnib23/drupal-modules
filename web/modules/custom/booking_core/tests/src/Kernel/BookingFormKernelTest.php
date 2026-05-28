@@ -4,6 +4,7 @@ namespace Drupal\Tests\booking_core\Kernel;
 
 use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use Drupal\Core\Form\FormState;
+use Drupal\booking_core\BookingInterface;
 use Drupal\booking_core\Form\BookingForm;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -95,6 +96,7 @@ class BookingFormKernelTest extends EntityKernelTestBase {
     $booking = $this->container->get('entity_type.manager')
       ->getStorage('booking')
       ->load(reset($ids));
+    $this->assertInstanceOf(BookingInterface::class, $booking);
     $this->assertSame('Jane Doe', $booking->getName());
     $this->assertSame('jane@example.com', $booking->getEmail());
 

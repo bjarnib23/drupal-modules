@@ -92,7 +92,7 @@ class BookingForm extends FormBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('entity_type.manager'),
       $container->get('plugin.manager.mail'),
       $container->get('config.factory'),

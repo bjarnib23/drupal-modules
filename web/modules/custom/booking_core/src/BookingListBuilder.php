@@ -40,7 +40,7 @@ class BookingListBuilder extends EntityListBuilder {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, EntityTypeInterface $entity_type): static {
-    return new static(
+    return new self(
       $entity_type,
       $container->get('entity_type.manager')->getStorage($entity_type->id()),
       $container->get('request_stack'),
