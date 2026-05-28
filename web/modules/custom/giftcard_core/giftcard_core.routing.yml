@@ -29,6 +29,8 @@ giftcard_core.webhook:
   requirements:
     _access: 'TRUE'
   methods: [POST]
+  options:
+    no_cache: TRUE
 
 giftcard_core.settings:
   path: '/admin/config/giftcard-core/settings'

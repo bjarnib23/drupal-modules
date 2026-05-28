@@ -35,7 +35,7 @@ class GiftCardWebhookController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('giftcard_core.gift_card_service'),
       $container->get('giftcard_core.payment_client'),
       $container->get('plugin.manager.mail'),

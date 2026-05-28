@@ -25,7 +25,7 @@ class GiftCardController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('giftcard_core.gift_card_service'),
     );
   }
