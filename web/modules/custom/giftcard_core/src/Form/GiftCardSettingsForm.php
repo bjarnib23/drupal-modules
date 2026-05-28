@@ -78,7 +78,7 @@ class GiftCardSettingsForm extends ConfigFormBase {
     $form['min_amount'] = [
       '#type'          => 'number',
       '#title'         => $this->t('Minimum gift card amount'),
-      '#description'   => $this->t('Smallest purchase amount allowed, in the configured currency.'),
+      '#description'   => $this->t('Smallest purchase amount allowed, in whole units of the configured currency (e.g. 1000 = 1000 ISK).'),
       '#default_value' => $config->get('min_amount'),
       '#min'           => 1,
       '#required'      => TRUE,
