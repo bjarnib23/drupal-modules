@@ -59,7 +59,7 @@ class GiftCardWebhookController extends ControllerBase {
     $path      = $request->getPathInfo();
 
     if (!$this->paymentClient->verifyWebhookSignature($body, $salt, $timestamp, $signature, $path)) {
-      $this->logger('giftcard_core')->warning('Received webhook with invalid signature.');
+      $this->getLogger('giftcard_core')->warning('Received webhook with invalid signature.');
       return new Response('Forbidden', Response::HTTP_FORBIDDEN);
     }
 
@@ -72,13 +72,13 @@ class GiftCardWebhookController extends ControllerBase {
 
     $paymentId = $payload['data']['id'] ?? NULL;
     if ($paymentId === NULL) {
-      $this->logger('giftcard_core')->error('Webhook PAYMENT_COMPLETED missing payment ID.');
+      $this->getLogger('giftcard_core')->error('Webhook PAYMENT_COMPLETED missing payment ID.');
       return new Response('Bad Request', Response::HTTP_BAD_REQUEST);
     }
 
     $checkoutData = $this->giftCardService->getCheckoutDataByPaymentId($paymentId);
     if ($checkoutData === NULL) {
-      $this->logger('giftcard_core')->warning(
+      $this->getLogger('giftcard_core')->warning(
         'No checkout data found for payment @id.',
         ['@id' => $paymentId]
       );

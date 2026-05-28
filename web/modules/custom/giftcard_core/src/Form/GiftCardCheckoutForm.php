@@ -185,7 +185,7 @@ class GiftCardCheckoutForm extends FormBase {
     );
 
     if ($session === NULL) {
-      $this->logger('giftcard_core')->error('Failed to create payment checkout session.');
+      $this->getLogger('giftcard_core')->error('Failed to create payment checkout session.');
       $this->messenger()->addError($this->t('The payment gateway is unavailable. Please try again later.'));
       return;
     }

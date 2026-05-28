@@ -189,8 +189,8 @@ class GiftCardService {
    */
   public function generateCode(): string {
     do {
-      $raw  = strtoupper(str_replace(['+', '/', '='], '', base64_encode(random_bytes(16))));
-      $code = substr($raw, 0, 16);
+      $raw    = strtoupper(str_replace(['+', '/', '='], '', base64_encode(random_bytes(16))));
+      $code   = substr($raw, 0, 16);
       $exists = $this->entityTypeManager
         ->getStorage('gift_card')
         ->loadByProperties(['code' => $code]);
