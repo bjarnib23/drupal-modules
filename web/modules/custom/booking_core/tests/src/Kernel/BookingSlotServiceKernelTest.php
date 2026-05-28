@@ -45,6 +45,9 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
     return $date;
   }
 
+  /**
+   * Returns the slot service from the container.
+   */
   private function slotService(): BookingSlotService {
     return $this->container->get('booking_core.slot_service');
   }
@@ -53,7 +56,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * An open weekday within the booking window returns the expected slots.
    */
   public function testOpenDayReturnsSlots(): void {
-    $date  = $this->nextWeekday(1); // Monday — open by default
+    // Monday — open by default.
+    $date  = $this->nextWeekday(1);
     $slots = $this->slotService()->getAvailableSlots($date->format('Y-m-d'));
 
     $this->assertNotEmpty($slots);
@@ -66,7 +70,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * A closed day (Saturday) returns an empty array.
    */
   public function testClosedDayReturnsEmpty(): void {
-    $date  = $this->nextWeekday(6); // Saturday — closed by default
+    // Saturday — closed by default.
+    $date  = $this->nextWeekday(6);
     $slots = $this->slotService()->getAvailableSlots($date->format('Y-m-d'));
 
     $this->assertEmpty($slots);
@@ -104,7 +109,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * An all-day blocked period returns an empty array for that date.
    */
   public function testAllDayBlockedPeriodReturnsEmpty(): void {
-    $date     = $this->nextWeekday(2); // Tuesday
+    // Tuesday.
+    $date     = $this->nextWeekday(2);
     $date_str = $date->format('Y-m-d');
 
     $this->config('booking_core.settings')->set('blocked_periods', [
@@ -124,7 +130,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * A partial block removes only the overlapping slots.
    */
   public function testPartialBlockExcludesOnlyOverlappingSlots(): void {
-    $date     = $this->nextWeekday(3); // Wednesday
+    // Wednesday.
+    $date     = $this->nextWeekday(3);
     $date_str = $date->format('Y-m-d');
 
     $this->config('booking_core.settings')->set('blocked_periods', [
@@ -150,7 +157,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * Site timezone is UTC, so stored UTC time equals local time.
    */
   public function testAlreadyBookedSlotIsExcluded(): void {
-    $date     = $this->nextWeekday(4); // Thursday
+    // Thursday.
+    $date     = $this->nextWeekday(4);
     $date_str = $date->format('Y-m-d');
 
     Booking::create([
@@ -168,7 +176,8 @@ class BookingSlotServiceKernelTest extends EntityKernelTestBase {
    * Multiple bookings on the same day each remove their own slot.
    */
   public function testMultipleBookingsEachRemoveTheirSlot(): void {
-    $date     = $this->nextWeekday(5); // Friday
+    // Friday.
+    $date     = $this->nextWeekday(5);
     $date_str = $date->format('Y-m-d');
 
     foreach (['09:00', '10:00', '11:00'] as $time) {

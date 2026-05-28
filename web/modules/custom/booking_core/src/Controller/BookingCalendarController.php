@@ -17,7 +17,7 @@ class BookingCalendarController extends ControllerBase {
   /**
    * Constructs a BookingCalendarController object.
    *
-   * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack.
    */
   public function __construct(
