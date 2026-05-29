@@ -115,7 +115,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    * Sets the gift card amount.
    *
    * @param int $amount
-   *   The amount in the smallest currency unit.
+   *   The amount in the major currency unit.
    *
    * @return static
    */
