@@ -2,6 +2,8 @@
 
 namespace Drupal\giftcard_core;
 
+use Symfony\Component\HttpFoundation\Request;
+
 /**
  * No-op payment client used as a fallback when no gateway module is installed.
  *
@@ -13,15 +15,22 @@ class NullPaymentClient implements PaymentClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function createCheckout(int $amount, string $currency, string $country, string $completeUrl, string $cancelUrl): ?array {
+  public function createCheckout(int $amount, string $currency, string $completeUrl, string $cancelUrl): ?array {
     return NULL;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function verifyWebhookSignature(string $body, string $salt, string $timestamp, string $signature, string $path): bool {
+  public function verifyWebhook(Request $request): bool {
     return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extractCompletedPaymentId(Request $request): ?string {
+    return NULL;
   }
 
 }

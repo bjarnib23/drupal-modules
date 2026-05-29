@@ -3,24 +3,28 @@
 namespace Drupal\giftcard_rapyd;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\giftcard_core\PaymentClientInterface;
 use Drupal\key\KeyRepositoryInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Rapyd implementation of PaymentClientInterface.
  *
- * Credentials are loaded from the Key module. Every outbound request is
- * signed with HMAC-SHA256. Every inbound webhook signature is verified
- * before the payload is trusted.
+ * Credentials are loaded from the Key module via giftcard_rapyd.settings.
+ * Every outbound request is signed with HMAC-SHA256. Inbound webhooks are
+ * verified for signature, timestamp skew, and idempotency-key replay before
+ * the payload is trusted.
  */
 class RapydClient implements PaymentClientInterface {
 
-  private const SANDBOX_BASE = 'https://sandboxapi.rapyd.net';
-  private const LIVE_BASE    = 'https://api.rapyd.net';
+  private const SANDBOX_BASE    = 'https://sandboxapi.rapyd.net';
+  private const LIVE_BASE       = 'https://api.rapyd.net';
+  private const SALTS_COLLECTION = 'giftcard_rapyd.webhook_salts';
 
   /**
    * Constructs a new RapydClient.
@@ -35,6 +39,8 @@ class RapydClient implements PaymentClientInterface {
    *   The logger channel factory.
    * @param \Drupal\Core\Language\LanguageManagerInterface $languageManager
    *   The language manager.
+   * @param \Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface $keyValueExpirable
+   *   The expirable key-value store factory (used for replay protection).
    */
   public function __construct(
     private readonly ClientInterface $httpClient,
@@ -42,12 +48,15 @@ class RapydClient implements PaymentClientInterface {
     private readonly ConfigFactoryInterface $configFactory,
     private readonly LoggerChannelFactoryInterface $loggerFactory,
     private readonly LanguageManagerInterface $languageManager,
+    private readonly KeyValueExpirableFactoryInterface $keyValueExpirable,
   ) {}
 
   /**
    * {@inheritdoc}
    */
-  public function createCheckout(int $amount, string $currency, string $country, string $completeUrl, string $cancelUrl): ?array {
+  public function createCheckout(int $amount, string $currency, string $completeUrl, string $cancelUrl): ?array {
+    $country = $this->configFactory->get('giftcard_rapyd.settings')->get('rapyd_country');
+
     $body = json_encode([
       'amount'                => $amount,
       'currency'              => $currency,
@@ -76,8 +85,18 @@ class RapydClient implements PaymentClientInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * Verifies the Rapyd HMAC-SHA256 signature, rejects requests with a
+   * timestamp more than 5 minutes from the server clock, and blocks
+   * replayed idempotency keys for 10 minutes.
    */
-  public function verifyWebhookSignature(string $body, string $salt, string $timestamp, string $signature, string $path): bool {
+  public function verifyWebhook(Request $request): bool {
+    $body      = $request->getContent();
+    $salt      = $request->headers->get('rapyd-idempotency', '');
+    $timestamp = $request->headers->get('rapyd-timestamp', '');
+    $signature = $request->headers->get('rapyd-signature', '');
+    $path      = $request->getPathInfo();
+
     $access = $this->getAccess();
     $secret = $this->getSecret();
     if ($access === NULL || $secret === NULL) {
@@ -86,7 +105,38 @@ class RapydClient implements PaymentClientInterface {
 
     $toSign   = 'post' . $path . $salt . $timestamp . $access . $secret . $body;
     $expected = base64_encode(hash_hmac('sha256', $toSign, $secret));
-    return hash_equals($expected, $signature);
+    if (!hash_equals($expected, $signature)) {
+      $this->loggerFactory->get('giftcard_core')->warning('Webhook rejected: invalid signature.');
+      return FALSE;
+    }
+
+    if (abs(time() - (int) $timestamp) > 300) {
+      $this->loggerFactory->get('giftcard_core')->warning('Webhook rejected: timestamp out of acceptable range.');
+      return FALSE;
+    }
+
+    $seenSalts = $this->keyValueExpirable->get(self::SALTS_COLLECTION);
+    if ($seenSalts->get($salt) !== NULL) {
+      $this->loggerFactory->get('giftcard_core')->warning(
+        'Webhook rejected: duplicate idempotency key @salt.',
+        ['@salt' => $salt]
+      );
+      return FALSE;
+    }
+    $seenSalts->setWithExpire($salt, TRUE, 600);
+
+    return TRUE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extractCompletedPaymentId(Request $request): ?string {
+    $payload = json_decode($request->getContent(), TRUE);
+    if (($payload['type'] ?? '') !== 'PAYMENT_COMPLETED') {
+      return NULL;
+    }
+    return $payload['data']['id'] ?? NULL;
   }
 
   /**
@@ -148,7 +198,7 @@ class RapydClient implements PaymentClientInterface {
    *   The base URL.
    */
   private function baseUrl(): string {
-    $sandbox = (bool) $this->configFactory->get('giftcard_core.settings')->get('rapyd_sandbox');
+    $sandbox = (bool) $this->configFactory->get('giftcard_rapyd.settings')->get('rapyd_sandbox');
     return $sandbox ? self::SANDBOX_BASE : self::LIVE_BASE;
   }
 
@@ -159,7 +209,7 @@ class RapydClient implements PaymentClientInterface {
    *   The access key value, or NULL if not configured.
    */
   private function getAccess(): ?string {
-    $keyId = $this->configFactory->get('giftcard_core.settings')->get('rapyd_access_key_id');
+    $keyId = $this->configFactory->get('giftcard_rapyd.settings')->get('rapyd_access_key_id');
     if (empty($keyId)) {
       return NULL;
     }
@@ -174,7 +224,7 @@ class RapydClient implements PaymentClientInterface {
    *   The secret key value, or NULL if not configured.
    */
   private function getSecret(): ?string {
-    $keyId = $this->configFactory->get('giftcard_core.settings')->get('rapyd_secret_key_id');
+    $keyId = $this->configFactory->get('giftcard_rapyd.settings')->get('rapyd_secret_key_id');
     if (empty($keyId)) {
       return NULL;
     }

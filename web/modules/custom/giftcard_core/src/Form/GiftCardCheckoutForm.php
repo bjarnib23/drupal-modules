@@ -161,7 +161,6 @@ class GiftCardCheckoutForm extends FormBase {
 
     $config   = $this->configFactory()->get('giftcard_core.settings');
     $currency = $config->get('currency');
-    $country  = $config->get('rapyd_country');
 
     $checkoutData = [
       'sender_name'     => $form_state->getValue('sender_name'),
@@ -179,7 +178,6 @@ class GiftCardCheckoutForm extends FormBase {
     $session = $this->paymentClient->createCheckout(
       $checkoutData['amount'],
       $checkoutData['currency'],
-      $country,
       $completeUrl,
       $cancelUrl,
     );
