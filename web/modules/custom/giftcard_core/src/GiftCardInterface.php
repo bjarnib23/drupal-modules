@@ -181,7 +181,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    * @return string
    *   The payment ID.
    */
-  public function getRapydPaymentId(): string;
+  public function getPaymentId(): string;
 
   /**
    * Sets the payment provider's payment ID.
@@ -191,7 +191,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    *
    * @return static
    */
-  public function setRapydPaymentId(string $paymentId): static;
+  public function setPaymentId(string $paymentId): static;
 
   /**
    * Gets the Unix timestamp when the gift card was created.

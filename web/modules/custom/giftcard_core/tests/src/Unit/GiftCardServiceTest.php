@@ -71,7 +71,7 @@ class GiftCardServiceTest extends UnitTestCase {
     $storage->method('create')->willReturn($card);
 
     $result = $this->makeService($storage)->createGiftCard([
-      'rapyd_payment_id' => 'pay_new',
+      'payment_id' => 'pay_new',
       'code'             => 'TESTCODE1234567',
       'recipient_name'   => 'Bob',
       'recipient_email'  => 'bob@example.com',
@@ -89,12 +89,12 @@ class GiftCardServiceTest extends UnitTestCase {
 
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('loadByProperties')
-      ->with(['rapyd_payment_id' => 'pay_dup'])
+      ->with(['payment_id' => 'pay_dup'])
       ->willReturn([$existing]);
     $storage->expects($this->never())->method('create');
 
     $result = $this->makeService($storage)->createGiftCard([
-      'rapyd_payment_id' => 'pay_dup',
+      'payment_id' => 'pay_dup',
       'amount'           => 5000,
       'currency'         => 'ISK',
     ]);

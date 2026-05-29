@@ -189,15 +189,15 @@ class GiftCard extends ContentEntityBase implements GiftCardInterface {
   /**
    * {@inheritdoc}
    */
-  public function getRapydPaymentId(): string {
-    return $this->get('rapyd_payment_id')->value ?? '';
+  public function getPaymentId(): string {
+    return $this->get('payment_id')->value ?? '';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function setRapydPaymentId(string $paymentId): static {
-    $this->set('rapyd_payment_id', $paymentId);
+  public function setPaymentId(string $paymentId): static {
+    $this->set('payment_id', $paymentId);
     return $this;
   }
 
@@ -298,7 +298,7 @@ class GiftCard extends ContentEntityBase implements GiftCardInterface {
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
-    $fields['rapyd_payment_id'] = BaseFieldDefinition::create('string')
+    $fields['payment_id'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Payment ID'))
       ->setSetting('max_length', 255)
       ->setDisplayOptions('view', ['label' => 'above', 'type' => 'string', 'weight' => 9])

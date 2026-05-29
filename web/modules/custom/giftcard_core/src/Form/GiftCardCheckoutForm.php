@@ -188,7 +188,7 @@ class GiftCardCheckoutForm extends FormBase {
       return;
     }
 
-    $checkoutData['rapyd_payment_id'] = $session['payment_id'];
+    $checkoutData['payment_id'] = $session['payment_id'];
 
     $this->giftCardService->storeCheckoutData($checkoutData);
     $this->giftCardService->storeCheckoutDataByPaymentId($session['payment_id'], $checkoutData);

@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Gift Card Core module.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_uninstall().
+ */
+function giftcard_core_uninstall(): void {
+  \Drupal::configFactory()->getEditable('giftcard_core.settings')->delete();
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function giftcard_core_requirements(string $phase): array {
+  $requirements = [];
+
+  if ($phase === 'runtime') {
+    $config = \Drupal::config('giftcard_core.settings');
+
+    if (empty($config->get('currency'))) {
+      $requirements['giftcard_core_currency'] = [
+        'title'       => t('Gift Card Core'),
+        'description' => t('Currency code is not configured. Visit <a href=":url">Gift Card Settings</a>.', [
+          ':url' => \Drupal::url('giftcard_core.settings'),
+        ]),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Rename the rapyd_payment_id field to payment_id on the gift_card table.
+ */
+function giftcard_core_update_8001(): void {
+  $schema = Database::getConnection()->schema();
+  $table  = 'gift_card';
+
+  if ($schema->fieldExists($table, 'rapyd_payment_id') && !$schema->fieldExists($table, 'payment_id')) {
+    $schema->changeField($table, 'rapyd_payment_id', 'payment_id', [
+      'type'   => 'varchar',
+      'length' => 255,
+      'not null' => FALSE,
+      'default' => '',
+    ]);
+  }
+
+  \Drupal::entityDefinitionUpdateManager()->applyUpdates();
+}
