@@ -5,43 +5,44 @@ payment provider. Buyers fill in a purchase form, pay via a hosted checkout page
 and both the sender and recipient receive confirmation emails once the payment is
 confirmed by a webhook.
 
+This module is intentionally standalone — it does not depend on Drupal Commerce.
+Install a gateway sub-module (e.g. **giftcard_rapyd**) alongside it to activate
+checkout.
+
 ## Features
 
 - Custom **GiftCard** content entity with admin list, add, edit, and delete views.
-- **PaymentClientInterface** — swap the payment provider without touching the module.
-- Built-in **RapydClient** implementation using HMAC-signed requests.
+- **PaymentClientInterface** — swap the payment provider without touching this module.
 - Flood control to limit checkout attempts per IP per hour.
-- Configurable currency, country, minimum amount, and flood threshold.
+- Configurable currency, minimum amount, and flood threshold.
 - Confirmation emails to both sender and recipient on successful payment.
 
 ## Requirements
 
 - Drupal 10 or 11
 - PHP 8.1+
-- [Key](https://www.drupal.org/project/key) module — stores API credentials securely
+- A gateway sub-module that implements `PaymentClientInterface` (e.g. `giftcard_rapyd`)
 
 ## Installation
 
-1. Place the module folder inside `web/modules/custom/giftcard_core`.
-2. Enable the module:
+1. Place `giftcard_core` inside `web/modules/custom/`.
+2. Choose a gateway sub-module. For Rapyd, also place `giftcard_rapyd` there.
+3. Enable both modules:
 
    ```
-   drush en giftcard_core -y
+   drush en giftcard_core giftcard_rapyd -y
    ```
 
-3. Create two **Key** entities at **Administration → Configuration → System → Keys**:
-   - One for the Rapyd *access key*.
-   - One for the Rapyd *secret key*.
+4. If using `giftcard_rapyd`, create two **Key** entities at
+   **Administration → Configuration → System → Keys** — one for the Rapyd access
+   key and one for the secret key. Then open
+   **Administration → Configuration → Gift Cards → Rapyd API Settings** and fill
+   in the Key entity machine names, sandbox toggle, and country code.
 
-4. Open **Administration → Configuration → Gift Card → Settings** and fill in:
-   - The machine names of the two Key entities.
-   - Whether to use the Rapyd sandbox environment.
-   - The ISO 3166-1 alpha-2 country code (e.g. `IS`).
-   - The ISO 4217 currency code (e.g. `ISK`).
-   - The minimum gift card amount.
-   - The maximum checkout attempts per hour per IP.
+5. Open **Administration → Configuration → Gift Cards → Settings** and configure
+   the currency code, minimum amount, and flood threshold.
 
-5. Configure Rapyd to send `PAYMENT_COMPLETED` webhooks to:
+6. Point your payment provider's webhook to:
 
    ```
    https://your-site.example/gift-card/webhook
@@ -49,55 +50,72 @@ confirmed by a webhook.
 
 ## Configuration
 
-All settings are stored under the `giftcard_core.settings` configuration object.
+### `giftcard_core.settings`
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `rapyd_access_key_id` | string | Machine name of the Key entity holding the Rapyd access key |
-| `rapyd_secret_key_id` | string | Machine name of the Key entity holding the Rapyd secret key |
-| `rapyd_sandbox` | boolean | Use the Rapyd sandbox API when `true` |
-| `rapyd_country` | string | ISO 3166-1 alpha-2 country code sent to Rapyd |
 | `currency` | string | ISO 4217 currency code for gift card amounts |
-| `min_amount` | integer | Smallest purchase amount allowed |
+| `min_amount` | integer | Smallest purchase amount in the major unit (e.g. 1000 = 1000 ISK) |
 | `flood_threshold` | integer | Max checkout attempts per IP per hour (default: 5) |
+
+Gateway-specific settings (credentials, sandbox toggle, country) live in the
+sub-module's own config object (e.g. `giftcard_rapyd.settings`).
 
 ## Permissions
 
 | Permission | Description |
 |------------|-------------|
 | `administer gift cards` | Full CRUD access to gift card entities and module settings |
-| `view gift card list` | View the admin gift card list without editing |
 
 ## Swapping the Payment Provider
 
-The module registers `giftcard_core.payment_client` as a service that points to
-`RapydClient`. To use a different payment provider:
+Install any module that registers `giftcard_core.payment_client`. Implement
+`\Drupal\giftcard_core\PaymentClientInterface`:
 
-1. Create a class that implements `\Drupal\giftcard_core\PaymentClientInterface`.
-2. Override the service in your own module's `*.services.yml`:
+```php
+interface PaymentClientInterface {
+  // Create a hosted checkout session; return redirect_url + payment_id or null.
+  public function createCheckout(int $amount, string $currency, string $completeUrl, string $cancelUrl): ?array;
 
-   ```yaml
-   giftcard_core.payment_client:
-     class: Drupal\my_module\MyPaymentClient
-     arguments: ['@config.factory']
-   ```
+  // Return true only when the inbound request is authentic (signature + replay).
+  public function verifyWebhook(Request $request): bool;
 
-The two methods you must implement are:
+  // Return the payment ID if this is a completed-payment event, else null.
+  public function extractCompletedPaymentId(Request $request): ?string;
+}
+```
 
-- `createCheckout(int $amount, string $currency, string $country, string $completeUrl, string $cancelUrl): ?array`
-  — returns `['payment_id' => '...', 'redirect_url' => '...']` or `null` on failure.
-- `verifyWebhookSignature(string $body, string $signature): bool`
-  — returns `true` when the incoming webhook request is authentic.
+Wire your class as the service in your sub-module's `*.services.yml`:
+
+```yaml
+giftcard_core.payment_client:
+  class: Drupal\my_gateway\MyGatewayClient
+  arguments: ['@config.factory']
+```
+
+## Privacy / data retention
+
+When a buyer submits the checkout form, the following PII is stored temporarily:
+
+- **PrivateTempStore** (session-bound) — used to display the thank-you page after
+  the buyer returns from the payment provider. Expires with the user session.
+- **Expirable key-value store** (keyed by payment ID) — used by the webhook handler
+  to create the GiftCard entity. Expires after **1 hour** (hardcoded in
+  `GiftCardService::storeCheckoutDataByPaymentId()`).
+
+Data stored includes: sender name, sender email, recipient name, recipient email,
+personal message, amount, and currency. No payment card data is handled by this
+module — that remains with the payment provider.
 
 ## Routes
 
 | Path | Description |
 |------|-------------|
 | `/gift-card/buy` | Public purchase form |
-| `/gift-card/buy/thank-you` | Confirmation page shown after redirect back from payment provider |
+| `/gift-card/buy/thank-you` | Confirmation page shown after redirect back from the provider |
 | `/gift-card/buy/cancel` | Cancellation page |
-| `/gift-card/webhook` | Webhook endpoint (POST, no CSRF token required) |
-| `/admin/config/giftcard-core/settings` | Module settings form |
+| `/gift-card/webhook` | Webhook endpoint (POST only; signature verification replaces CSRF) |
+| `/admin/config/giftcard-core/settings` | Core module settings (currency, flood threshold) |
 
 ## Maintainers
 
