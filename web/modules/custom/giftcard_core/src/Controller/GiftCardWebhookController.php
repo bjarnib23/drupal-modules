@@ -3,6 +3,7 @@
 namespace Drupal\giftcard_core\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface;
 use Drupal\Core\Mail\MailManagerInterface;
 use Drupal\giftcard_core\GiftCardService;
 use Drupal\giftcard_core\PaymentClientInterface;
@@ -15,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class GiftCardWebhookController extends ControllerBase {
 
+  private const WEBHOOK_SALTS_COLLECTION = 'giftcard_core.webhook_salts';
+
   /**
    * Constructs a new GiftCardWebhookController.
    *
@@ -24,11 +27,14 @@ class GiftCardWebhookController extends ControllerBase {
    *   The payment client.
    * @param \Drupal\Core\Mail\MailManagerInterface $mailManager
    *   The mail manager.
+   * @param \Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface $keyValueExpirable
+   *   The expirable key-value store factory.
    */
   public function __construct(
     private readonly GiftCardService $giftCardService,
     private readonly PaymentClientInterface $paymentClient,
     private readonly MailManagerInterface $mailManager,
+    private readonly KeyValueExpirableFactoryInterface $keyValueExpirable,
   ) {}
 
   /**
@@ -39,6 +45,7 @@ class GiftCardWebhookController extends ControllerBase {
       $container->get('giftcard_core.gift_card_service'),
       $container->get('giftcard_core.payment_client'),
       $container->get('plugin.manager.mail'),
+      $container->get('keyvalue.expirable'),
     );
   }
 
@@ -62,6 +69,18 @@ class GiftCardWebhookController extends ControllerBase {
       $this->getLogger('giftcard_core')->warning('Received webhook with invalid signature.');
       return new Response('Forbidden', Response::HTTP_FORBIDDEN);
     }
+
+    if (abs(time() - (int) $timestamp) > 300) {
+      $this->getLogger('giftcard_core')->warning('Webhook rejected: timestamp out of acceptable range.');
+      return new Response('Forbidden', Response::HTTP_FORBIDDEN);
+    }
+
+    $seenSalts = $this->keyValueExpirable->get(self::WEBHOOK_SALTS_COLLECTION);
+    if ($seenSalts->get($salt) !== NULL) {
+      $this->getLogger('giftcard_core')->warning('Webhook rejected: duplicate idempotency key @salt.', ['@salt' => $salt]);
+      return new Response('Forbidden', Response::HTTP_FORBIDDEN);
+    }
+    $seenSalts->setWithExpire($salt, TRUE, 600);
 
     $payload = json_decode($body, TRUE);
     $type    = $payload['type'] ?? '';
