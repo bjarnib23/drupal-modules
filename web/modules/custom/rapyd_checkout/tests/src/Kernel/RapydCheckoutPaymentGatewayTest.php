@@ -15,6 +15,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -28,6 +29,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 #[CoversClass(RapydCheckout::class)]
 #[Group('rapyd_checkout')]
+#[RunTestsInSeparateProcesses]
 class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
 
   /**
@@ -168,7 +170,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       new Response(200, [], json_encode([
         'data' => [
           'status' => 'DON',
-          'payment' => ['id' => 'pay_test_001', 'status' => 'CLO'],
+          'payment' => ['id' => 'pay_test_001', 'status' => 'CLO', 'amount' => 10000],
         ],
       ])),
     ]);
@@ -204,7 +206,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $checkout_data = json_encode([
       'data' => [
         'status' => 'DON',
-        'payment' => ['id' => 'pay_test_idem', 'status' => 'CLO'],
+        'payment' => ['id' => 'pay_test_idem', 'status' => 'CLO', 'amount' => 10000],
       ],
     ]);
 
@@ -270,7 +272,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       new Response(200, [], json_encode([
         'data' => [
           'status' => 'DON',
-          'payment' => ['id' => 'pay_state_guard', 'status' => 'CLO'],
+          'payment' => ['id' => 'pay_state_guard', 'status' => 'CLO', 'amount' => 10000],
         ],
       ])),
     ]);

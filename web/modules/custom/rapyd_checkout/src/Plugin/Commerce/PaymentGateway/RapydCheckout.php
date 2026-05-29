@@ -8,7 +8,6 @@ use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OffsitePaymentGatewayBase;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsNotificationsInterface;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsRefundsInterface;
-use Drupal\commerce_price\MinorUnitsConverterInterface;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\Repository\CurrencyRepositoryInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -51,11 +50,6 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
    * The logger channel.
    */
   protected LoggerInterface $logger;
-
-  /**
-   * The minor-units converter.
-   */
-  protected MinorUnitsConverterInterface $minorUnitsConverter;
 
   /**
    * The Commerce currency repository.
@@ -285,7 +279,7 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
 
     $payment_status = $data['payment']['status'] ?? '';
     $checkout_status = $data['status'] ?? '';
-    if ($payment_status !== 'CLO' && $checkout_status !== 'DON') {
+    if ($payment_status !== 'CLO' || $checkout_status !== 'DON') {
       throw new PaymentGatewayException(sprintf(
         'Payment not completed (checkout: %s, payment: %s).',
         $checkout_status,
@@ -296,7 +290,7 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
     // Verify the amount Rapyd actually processed matches the order total.
     $rapyd_amount = (int) ($data['payment']['amount'] ?? 0);
     $expected_amount = $this->toMinorUnits($order->getTotalPrice());
-    if ($rapyd_amount > 0 && $rapyd_amount !== $expected_amount) {
+    if ($rapyd_amount !== $expected_amount) {
       throw new PaymentGatewayException(sprintf(
         'Amount mismatch: Rapyd processed %d, order total %d.',
         $rapyd_amount,
@@ -371,6 +365,7 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
     $order_id = (int) $m[1];
     $remote_id = $payload['data']['id'] ?? '';
 
+    /** @var \Drupal\commerce_order\Entity\OrderInterface|null $order */
     $order = $this->entityTypeManager
       ->getStorage('commerce_order')
       ->load($order_id);
