@@ -14,13 +14,24 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class BookingEntityTest extends EntityKernelTestBase {
 
+  /**
+   * Modules to enable.
+   *
+   * @var string[]
+   */
   protected static $modules = ['booking_core', 'datetime'];
 
+  /**
+   * {@inheritdoc}
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('booking');
   }
 
+  /**
+   * Tests that a Booking entity can be created, saved, and reloaded.
+   */
   public function testBookingCanBeCreatedAndLoaded(): void {
     $booking = Booking::create([
       'name'    => 'Jane Doe',
@@ -41,6 +52,9 @@ class BookingEntityTest extends EntityKernelTestBase {
     $this->assertSame('2026-06-01T10:00:00', $loaded->get('date')->value);
   }
 
+  /**
+   * Tests that a Booking without a name fails validation.
+   */
   public function testBookingRequiresName(): void {
     $booking = Booking::create([
       'email' => 'jane@example.com',

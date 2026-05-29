@@ -11,16 +11,25 @@ use Drupal\Core\Url;
  */
 class BookingDeleteForm extends ContentEntityDeleteForm {
 
+  /**
+   * {@inheritdoc}
+   */
   public function getQuestion(): TranslatableMarkup {
     return $this->t('Are you sure you want to delete the booking for %name?', [
       '%name' => $this->entity->label(),
     ]);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getCancelUrl(): Url {
     return new Url('entity.booking.collection');
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getDeletionMessage(): TranslatableMarkup {
     return $this->t('Booking for %name has been deleted.', [
       '%name' => $this->entity->label(),

@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\TrustedRedirectResponse;
 use Drupal\Core\Url;
 use Drupal\giftcard_core\GiftCardService;
 use Drupal\giftcard_core\PaymentClientInterface;
@@ -193,7 +194,7 @@ class GiftCardCheckoutForm extends FormBase {
     $this->giftCardService->storeCheckoutData($checkoutData);
     $this->giftCardService->storeCheckoutDataByPaymentId($session['payment_id'], $checkoutData);
 
-    $form_state->setRedirectUrl(Url::fromUri($session['redirect_url']));
+    $form_state->setResponse(new TrustedRedirectResponse($session['redirect_url']));
   }
 
 }

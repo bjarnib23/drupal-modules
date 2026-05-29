@@ -29,6 +29,12 @@ booking_core.settings:
     weeks_ahead:
       type: integer
       label: 'Weeks ahead'
+    flood_limit:
+      type: integer
+      label: 'Flood limit (max booking attempts per window)'
+    flood_window:
+      type: integer
+      label: 'Flood window in seconds'
     blocked_periods:
       type: sequence
       label: 'Blocked dates and periods'

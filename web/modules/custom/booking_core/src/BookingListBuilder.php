@@ -2,15 +2,56 @@
 
 namespace Drupal\booking_core;
 
-use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityListBuilder;
+use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Utility\TableSort;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Defines the list builder for Booking entities.
  */
 class BookingListBuilder extends EntityListBuilder {
 
+  /**
+   * Constructs a BookingListBuilder object.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *   The entity type definition.
+   * @param \Drupal\Core\Entity\EntityStorageInterface $storage
+   *   The entity storage.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
+   *   The request stack.
+   * @param \Drupal\Core\Datetime\DateFormatterInterface $dateFormatter
+   *   The date formatter.
+   */
+  public function __construct(
+    EntityTypeInterface $entity_type,
+    EntityStorageInterface $storage,
+    private readonly RequestStack $requestStack,
+    private readonly DateFormatterInterface $dateFormatter,
+  ) {
+    parent::__construct($entity_type, $storage);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, EntityTypeInterface $entity_type): static {
+    return new self(
+      $entity_type,
+      $container->get('entity_type.manager')->getStorage($entity_type->id()),
+      $container->get('request_stack'),
+      $container->get('date.formatter'),
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildHeader(): array {
     $header['name'] = [
       'data'      => $this->t('Name'),
@@ -36,6 +77,9 @@ class BookingListBuilder extends EntityListBuilder {
     return $header + parent::buildHeader();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getDefaultOperations(EntityInterface $entity): array {
     $operations = [];
 
@@ -58,6 +102,9 @@ class BookingListBuilder extends EntityListBuilder {
     return $operations;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildRow(EntityInterface $entity): array {
     /** @var \Drupal\booking_core\BookingInterface $entity */
     $row['name']    = $entity->getName();
@@ -67,13 +114,17 @@ class BookingListBuilder extends EntityListBuilder {
     return $row + parent::buildRow($entity);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getEntityIds(): array {
     $allowed = ['name', 'email', 'service', 'date'];
+    $header  = $this->buildHeader();
+    $request = $this->requestStack->getCurrentRequest();
 
-    $order = \Drupal::request()->query->get('order', 'date');
-    $sort  = \Drupal::request()->query->get('sort', 'asc');
-
-    $field     = in_array($order, $allowed, TRUE) ? $order : 'date';
+    $order     = TableSort::getOrder($header, $request);
+    $sort      = TableSort::getSort($header, $request);
+    $field     = in_array($order['sql'] ?? '', $allowed, TRUE) ? $order['sql'] : 'date';
     $direction = strtolower($sort) === 'desc' ? 'DESC' : 'ASC';
 
     return $this->getStorage()->getQuery()
@@ -82,11 +133,12 @@ class BookingListBuilder extends EntityListBuilder {
       ->execute();
   }
 
+  /**
+   * Formats a UTC datetime string for display in the site timezone.
+   */
   private function formatDate(string $date): string {
-    $site_tz = \Drupal::config('system.date')->get('timezone.default') ?: 'UTC';
-    $dt      = new DrupalDateTime($date, 'UTC');
-    $dt->setTimezone(new \DateTimeZone($site_tz));
-    return $dt->format('D d M Y \a\t H:i');
+    $ts = (new \DateTime($date, new \DateTimeZone('UTC')))->getTimestamp();
+    return $this->dateFormatter->format($ts, 'medium');
   }
 
 }
