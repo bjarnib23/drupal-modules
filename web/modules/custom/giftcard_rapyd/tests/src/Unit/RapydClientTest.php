@@ -1,13 +1,13 @@
 <?php
 
-namespace Drupal\Tests\giftcard_core\Unit;
+namespace Drupal\Tests\giftcard_rapyd\Unit;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
-use Drupal\giftcard_core\RapydClient;
+use Drupal\giftcard_rapyd\RapydClient;
 use Drupal\key\KeyInterface;
 use Drupal\key\KeyRepositoryInterface;
 use Drupal\Tests\UnitTestCase;
@@ -19,9 +19,20 @@ use PHPUnit\Framework\Attributes\Group;
  * Unit tests for RapydClient webhook signature verification.
  */
 #[CoversClass(RapydClient::class)]
-#[Group('giftcard_core')]
+#[Group('giftcard_rapyd')]
 class RapydClientTest extends UnitTestCase {
 
+  /**
+   * Builds a RapydClient with real access/secret key values.
+   *
+   * @param string $access
+   *   The access key value.
+   * @param string $secret
+   *   The secret key value.
+   *
+   * @return \Drupal\giftcard_rapyd\RapydClient
+   *   The client under test.
+   */
   private function makeClient(string $access = 'acc', string $secret = 'sec'): RapydClient {
     $accessKey = $this->createMock(KeyInterface::class);
     $accessKey->method('getKeyValue')->willReturn($access);
@@ -56,6 +67,12 @@ class RapydClientTest extends UnitTestCase {
     );
   }
 
+  /**
+   * Builds a RapydClient with empty key IDs (unconfigured gateway).
+   *
+   * @return \Drupal\giftcard_rapyd\RapydClient
+   *   The client under test.
+   */
   private function makeEmptyKeysClient(): RapydClient {
     $settings = $this->createMock(ImmutableConfig::class);
     $settings->method('get')->willReturnMap([
@@ -79,11 +96,17 @@ class RapydClientTest extends UnitTestCase {
     );
   }
 
+  /**
+   * Tests that verification returns FALSE when credentials are not configured.
+   */
   public function testVerifyWebhookReturnsFalseWithEmptyKeys(): void {
     $client = $this->makeEmptyKeysClient();
     $this->assertFalse($client->verifyWebhookSignature('body', 'salt', '123', 'sig', '/path'));
   }
 
+  /**
+   * Tests that a correctly signed webhook is accepted.
+   */
   public function testVerifyWebhookValidSignature(): void {
     $access    = 'my_access';
     $secret    = 'my_secret';
@@ -99,6 +122,9 @@ class RapydClientTest extends UnitTestCase {
     $this->assertTrue($client->verifyWebhookSignature($raw_body, $salt, $timestamp, $signature, $path));
   }
 
+  /**
+   * Tests that a tampered signature is rejected.
+   */
   public function testVerifyWebhookInvalidSignature(): void {
     $client = $this->makeClient('acc', 'sec');
     $this->assertFalse($client->verifyWebhookSignature('body', 'salt', '123', 'wrong_sig', '/path'));

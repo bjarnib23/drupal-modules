@@ -1,10 +1,11 @@
 <?php
 
-namespace Drupal\giftcard_core;
+namespace Drupal\giftcard_rapyd;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\giftcard_core\PaymentClientInterface;
 use Drupal\key\KeyRepositoryInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;

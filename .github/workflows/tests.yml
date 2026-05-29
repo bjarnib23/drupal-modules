@@ -52,3 +52,6 @@ jobs:
 
       - name: Run giftcard_core kernel tests
         run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/giftcard_core/tests/src/Kernel/ --testdox
+
+      - name: Run giftcard_rapyd unit tests
+        run: vendor/bin/phpunit -c web/core/phpunit.xml web/modules/custom/giftcard_rapyd/tests/src/Unit/ --testdox
