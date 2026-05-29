@@ -18,7 +18,7 @@ class BookingViewBuilder extends EntityViewBuilder {
    * {@inheritdoc}
    */
   public function view(EntityInterface $entity, $view_mode = 'full', $langcode = NULL): array {
-    $build = parent::view($entity, $view_mode, $langcode);
+    $build               = parent::view($entity, $view_mode, $langcode);
     $build['#theme']     = 'booking';
     $build['#booking']   = $entity;
     $build['#view_mode'] = $view_mode;

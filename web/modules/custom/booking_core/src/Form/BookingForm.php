@@ -203,10 +203,10 @@ class BookingForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    $config      = $this->configFactory()->get('booking_core.settings');
-    $flood_limit = (int) $config->get('flood_limit');
+    $config       = $this->configFactory()->get('booking_core.settings');
+    $flood_limit  = (int) $config->get('flood_limit');
     $flood_window = (int) $config->get('flood_window');
-    $ip = $this->getRequest()->getClientIp();
+    $ip           = $this->getRequest()->getClientIp();
     if (!$this->flood->isAllowed('booking_core_submit', $flood_limit, $flood_window, $ip)) {
       $form_state->setErrorByName('', $this->t('Too many booking attempts. Please try again later.'));
       return;

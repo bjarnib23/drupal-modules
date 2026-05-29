@@ -58,7 +58,7 @@ function template_preprocess_booking(array &$variables): void {
 function booking_core_mail(string $key, array &$message, array $params): void {
   $company  = \Drupal::config('system.site')->get('name') ?: 'Us';
   $ts       = (new \DateTime($params['date'], new \DateTimeZone('UTC')))->getTimestamp();
-  $date_fmt = \Drupal::service('date.formatter')->format($ts, 'custom', 'l j F Y \a\t H:i');
+  $date_fmt = \Drupal::service('date.formatter')->format($ts, 'booking');
 
   switch ($key) {
     case 'confirmation':
