@@ -3,13 +3,13 @@
 namespace Drupal\Tests\giftcard_core\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\Core\TempStore\PrivateTempStore;
-use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Drupal\giftcard_core\Form\GiftCardCheckoutForm;
 use Drupal\giftcard_core\PaymentClientInterface;
 use Drupal\KernelTests\Core\Entity\EntityKernelTestBase;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
  * Tests GiftCardCheckoutForm submission, checkout data storage, and flood control.
@@ -32,14 +32,6 @@ class GiftCardCheckoutFormTest extends EntityKernelTestBase {
     $this->installEntitySchema('gift_card');
     $this->installConfig(['giftcard_core']);
     $this->container->set('flood', new \Drupal\Core\Flood\MemoryBackend($this->container->get('request_stack')));
-
-    // PrivateTempStore requires an HTTP session, which is unavailable in kernel
-    // tests. Replace the factory with a stub so storeCheckoutData() doesn't
-    // throw SessionNotFoundException.
-    $tempStore = $this->createMock(PrivateTempStore::class);
-    $tempStoreFactory = $this->createMock(PrivateTempStoreFactory::class);
-    $tempStoreFactory->method('get')->willReturn($tempStore);
-    $this->container->set('tempstore.private', $tempStoreFactory);
 
     $this->config('giftcard_core.settings')
       ->set('currency', 'ISK')
@@ -76,9 +68,11 @@ class GiftCardCheckoutFormTest extends EntityKernelTestBase {
     };
     $this->container->set('giftcard_core.payment_client', $paymentClient);
 
-    // Push a request with a known IP so flood controls are consistent.
+    // Push a request with a session so PrivateTempStore does not throw
+    // SessionNotFoundException during form submission.
     $request = Request::create('/gift-card/buy', 'POST');
     $request->server->set('REMOTE_ADDR', '127.0.0.1');
+    $request->setSession(new Session(new MockArraySessionStorage()));
     $this->container->get('request_stack')->push($request);
   }
 
@@ -124,9 +118,9 @@ class GiftCardCheckoutFormTest extends EntityKernelTestBase {
     $this->assertSame('pay_form_test_001', $storedByPayment['payment_id']);
 
     // Form must redirect to the payment provider's hosted page.
-    $redirect = $form_state->getRedirectUrl();
-    $this->assertNotNull($redirect, 'Form should set a redirect URL after successful submit.');
-    $this->assertStringStartsWith('https://', $redirect->toUriString());
+    $response = $form_state->getResponse();
+    $this->assertNotNull($response, 'Form should set a redirect response after successful submit.');
+    $this->assertStringStartsWith('https://', $response->getTargetUrl());
   }
 
   /**
