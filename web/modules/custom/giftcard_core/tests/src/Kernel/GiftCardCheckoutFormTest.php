@@ -28,8 +28,8 @@ class GiftCardCheckoutFormTest extends EntityKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('gift_card');
-    $this->installSchema('system', ['flood']);
     $this->installConfig(['giftcard_core']);
+    $this->container->set('flood', new \Drupal\Core\Flood\MemoryBackend($this->container->get('request_stack')));
 
     $this->config('giftcard_core.settings')
       ->set('currency', 'ISK')
