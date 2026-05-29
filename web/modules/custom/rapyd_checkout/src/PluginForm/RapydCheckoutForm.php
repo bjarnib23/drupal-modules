@@ -26,7 +26,8 @@ class RapydCheckoutForm extends PaymentOffsiteForm {
     $gateway = $payment->getPaymentGateway()->getPlugin();
     $gateway_config = $gateway->getConfiguration();
 
-    // Reject orders whose currency does not match the configured gateway currency.
+    // Reject orders whose currency does not match the configured gateway
+    // currency.
     $order_currency = $order->getTotalPrice()->getCurrencyCode();
     $gateway_currency = $gateway_config['currency'] ?? '';
     if ($gateway_currency && $order_currency !== $gateway_currency) {
@@ -37,8 +38,8 @@ class RapydCheckoutForm extends PaymentOffsiteForm {
       ));
     }
 
-    // Reuse the existing Rapyd session if one was already created for this order,
-    // so that pressing Back and continuing does not orphan the first checkout.
+    // Reuse an existing Rapyd session so that pressing Back and continuing
+    // does not orphan the first checkout.
     $checkout_id = $order->getData('rapyd_checkout_id');
     $redirect_url = $order->getData('rapyd_checkout_redirect_url');
 

@@ -18,6 +18,7 @@ function rapyd_checkout_requirements(string $phase): array {
   // Warn when a saved Rapyd gateway is missing currency or country.
   $storage = \Drupal::entityTypeManager()->getStorage('commerce_payment_gateway');
   foreach ($storage->loadMultiple() as $gateway) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
     if ($gateway->get('plugin') !== 'rapyd_checkout') {
       continue;
     }
@@ -53,6 +54,7 @@ function rapyd_checkout_uninstall(): void {
 function rapyd_checkout_update_10001(): void {
   $storage = \Drupal::entityTypeManager()->getStorage('commerce_payment_gateway');
   foreach ($storage->loadMultiple() as $gateway) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
     if ($gateway->get('plugin') !== 'rapyd_checkout') {
       continue;
     }

@@ -7,6 +7,8 @@ use Drupal\commerce_order\Entity\Order;
 use Drupal\commerce_order\Entity\OrderItem;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_price\Price;
+use Drupal\Core\Form\FormState;
+use Drupal\Core\Url;
 use Drupal\key\Entity\Key;
 use Drupal\rapyd_checkout\Plugin\Commerce\PaymentGateway\RapydCheckout;
 use GuzzleHttp\Client;
@@ -15,6 +17,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -28,6 +31,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 #[CoversClass(RapydCheckout::class)]
 #[Group('rapyd_checkout')]
+#[RunTestsInSeparateProcesses]
 class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
 
   /**
@@ -52,9 +56,17 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
   private const SECRET = 'test_rapyd_secret';
 
   /**
-   * Webhook notify path used across tests.
+   * Returns the Commerce-generated webhook notify path for the test gateway.
+   *
+   * Using the actual route generator (rather than a hardcoded string) ensures
+   * the test exercises the real production path if the route definition
+   * changes.
    */
-  private const NOTIFY_PATH = '/payment/notify/rapyd';
+  private function notifyPath(): string {
+    return Url::fromRoute('commerce_payment.notify', [
+      'commerce_payment_gateway' => 'rapyd',
+    ])->toString();
+  }
 
   /**
    * {@inheritdoc}
@@ -168,7 +180,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       new Response(200, [], json_encode([
         'data' => [
           'status' => 'DON',
-          'payment' => ['id' => 'pay_test_001', 'status' => 'CLO'],
+          'payment' => ['id' => 'pay_test_001', 'status' => 'CLO', 'amount' => 10000],
         ],
       ])),
     ]);
@@ -204,7 +216,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $checkout_data = json_encode([
       'data' => [
         'status' => 'DON',
-        'payment' => ['id' => 'pay_test_idem', 'status' => 'CLO'],
+        'payment' => ['id' => 'pay_test_idem', 'status' => 'CLO', 'amount' => 10000],
       ],
     ]);
 
@@ -249,9 +261,9 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
-    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+    $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
 
-    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', $salt);
     $request->headers->set('rapyd-timestamp', $timestamp);
     $request->headers->set('rapyd-signature', $signature);
@@ -270,7 +282,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       new Response(200, [], json_encode([
         'data' => [
           'status' => 'DON',
-          'payment' => ['id' => 'pay_state_guard', 'status' => 'CLO'],
+          'payment' => ['id' => 'pay_state_guard', 'status' => 'CLO', 'amount' => 10000],
         ],
       ])),
     ]);
@@ -288,7 +300,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
   }
 
   /**
-   * Tests that onNotify() creates a payment and places the order on valid webhook.
+   * Tests that onNotify() creates a payment and places the order on a webhook.
    */
   public function testOnNotifyCreatesPaymentAndPlacesOrder(): void {
     $order = $this->createTestOrder();
@@ -302,9 +314,9 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
-    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+    $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
 
-    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', $salt);
     $request->headers->set('rapyd-timestamp', $timestamp);
     $request->headers->set('rapyd-signature', $signature);
@@ -345,7 +357,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       ],
     ]);
 
-    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', 'salt');
     $request->headers->set('rapyd-timestamp', (string) time());
     $request->headers->set('rapyd-signature', 'completely_wrong_signature');
@@ -380,9 +392,9 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
-    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+    $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
 
-    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', $salt);
     $request->headers->set('rapyd-timestamp', $timestamp);
     $request->headers->set('rapyd-signature', $signature);
@@ -400,7 +412,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
   }
 
   /**
-   * Tests that onNotify() is idempotent — duplicate webhooks create no duplicate.
+   * Tests that onNotify() is idempotent — duplicates create no extra payment.
    */
   public function testOnNotifyIsIdempotent(): void {
     $order = $this->createTestOrder();
@@ -414,9 +426,9 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
-    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+    $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
 
-    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', $salt);
     $request->headers->set('rapyd-timestamp', $timestamp);
     $request->headers->set('rapyd-signature', $signature);
@@ -432,6 +444,77 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       1,
       $payments,
       'Duplicate webhooks do not create duplicate payments.'
+    );
+  }
+
+  /**
+   * Tests that validateConfigurationForm() rejects an unknown currency code.
+   */
+  public function testValidateConfigurationFormRejectsInvalidCurrency(): void {
+    $plugin = $this->loadPlugin();
+
+    $form       = ['#parents' => []];
+    $form_state = new FormState();
+    $form_state->setValues([
+      'access_key_id' => 'test_access',
+      'secret_key_id' => 'test_secret',
+      'currency'      => 'NOT_REAL',
+      'country'       => 'US',
+    ]);
+
+    $plugin->validateConfigurationForm($form, $form_state);
+
+    $this->assertArrayHasKey(
+      'currency',
+      $form_state->getErrors(),
+      'An unrecognised ISO 4217 currency code must produce a form error.'
+    );
+  }
+
+  /**
+   * Tests that validateConfigurationForm() rejects a malformed country code.
+   */
+  public function testValidateConfigurationFormRejectsInvalidCountry(): void {
+    $plugin = $this->loadPlugin();
+
+    $form       = ['#parents' => []];
+    $form_state = new FormState();
+    $form_state->setValues([
+      'access_key_id' => 'test_access',
+      'secret_key_id' => 'test_secret',
+      'currency'      => 'USD',
+      'country'       => 'TOOLONG',
+    ]);
+
+    $plugin->validateConfigurationForm($form, $form_state);
+
+    $this->assertArrayHasKey(
+      'country',
+      $form_state->getErrors(),
+      'A country code longer than two letters must produce a form error.'
+    );
+  }
+
+  /**
+   * Tests that validateConfigurationForm() accepts a valid configuration.
+   */
+  public function testValidateConfigurationFormAcceptsValidConfig(): void {
+    $plugin = $this->loadPlugin();
+
+    $form       = ['#parents' => []];
+    $form_state = new FormState();
+    $form_state->setValues([
+      'access_key_id' => 'test_access',
+      'secret_key_id' => 'test_secret',
+      'currency'      => 'USD',
+      'country'       => 'US',
+    ]);
+
+    $plugin->validateConfigurationForm($form, $form_state);
+
+    $this->assertEmpty(
+      $form_state->getErrors(),
+      'A valid configuration must not produce any form errors.'
     );
   }
 
