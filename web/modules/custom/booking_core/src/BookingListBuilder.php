@@ -7,6 +7,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityListBuilder;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Utility\TableSort;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -118,11 +119,12 @@ class BookingListBuilder extends EntityListBuilder {
    */
   protected function getEntityIds(): array {
     $allowed = ['name', 'email', 'service', 'date'];
+    $header  = $this->buildHeader();
+    $request = $this->requestStack->getCurrentRequest();
 
-    $request   = $this->requestStack->getCurrentRequest();
-    $order     = $request->query->get('order', 'date');
-    $sort      = $request->query->get('sort', 'asc');
-    $field     = in_array($order, $allowed, TRUE) ? $order : 'date';
+    $order     = TableSort::getOrder($header, $request);
+    $sort      = TableSort::getSort($header, $request);
+    $field     = in_array($order['sql'] ?? '', $allowed, TRUE) ? $order['sql'] : 'date';
     $direction = strtolower($sort) === 'desc' ? 'DESC' : 'ASC';
 
     return $this->getStorage()->getQuery()

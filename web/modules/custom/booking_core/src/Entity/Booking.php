@@ -30,6 +30,7 @@ use Drupal\booking_core\BookingInterface;
     ],
   ],
   base_table: 'booking',
+  list_cache_tags: ['booking_list'],
   admin_permission: 'administer booking',
   entity_keys: [
     'id'    => 'id',

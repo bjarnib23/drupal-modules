@@ -37,6 +37,8 @@ function booking_core_update_10001(): void {
 
 /**
  * Rename permission 'administer bookings' to 'administer booking' in all roles.
+ *
+ * Also grants 'manage booking' so admins can access the calendar after update.
  */
 function booking_core_update_10002(): void {
   $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple();
@@ -45,6 +47,21 @@ function booking_core_update_10002(): void {
     if ($role->hasPermission('administer bookings')) {
       $role->revokePermission('administer bookings');
       $role->grantPermission('administer booking');
+      $role->grantPermission('manage booking');
+      $role->save();
+    }
+  }
+}
+
+/**
+ * Grant 'manage booking' to any role that already has 'administer booking'.
+ */
+function booking_core_update_10003(): void {
+  $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple();
+  foreach ($roles as $role) {
+    /** @var \Drupal\user\RoleInterface $role */
+    if ($role->hasPermission('administer booking') && !$role->hasPermission('manage booking')) {
+      $role->grantPermission('manage booking');
       $role->save();
     }
   }
