@@ -124,7 +124,7 @@ class RapydClient implements PaymentClientInterface {
     ];
 
     try {
-      $response = $this->httpClient->request($method, $this->baseUrl() . $path, [
+      $response = $this->httpClient->request(strtoupper($method), $this->baseUrl() . $path, [
         'headers' => $headers,
         'body'    => $body,
       ]);
