@@ -22,8 +22,19 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class RapydClient implements PaymentClientInterface {
 
-  private const SANDBOX_BASE    = 'https://sandboxapi.rapyd.net';
-  private const LIVE_BASE       = 'https://api.rapyd.net';
+  /**
+   * Rapyd sandbox API base URL.
+   */
+  private const SANDBOX_BASE = 'https://sandboxapi.rapyd.net';
+
+  /**
+   * Rapyd production API base URL.
+   */
+  private const LIVE_BASE = 'https://api.rapyd.net';
+
+  /**
+   * Key-value collection used to store recently-seen webhook idempotency keys.
+   */
   private const SALTS_COLLECTION = 'giftcard_rapyd.webhook_salts';
 
   /**

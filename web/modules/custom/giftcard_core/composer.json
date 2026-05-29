@@ -1,5 +1,5 @@
 {
-  "name": "drupal/giftcard_core",
+  "name": "vigfushauksson/giftcard_core",
   "description": "Standalone gift card module with hosted checkout, webhook confirmation, and configurable payment provider.",
   "type": "drupal-module",
   "license": "GPL-2.0-or-later",

@@ -116,6 +116,7 @@ module — that remains with the payment provider.
 | `/gift-card/buy/cancel` | Cancellation page |
 | `/gift-card/webhook` | Webhook endpoint (POST only; signature verification replaces CSRF) |
 | `/admin/config/giftcard-core/settings` | Core module settings (currency, flood threshold) |
+| `/admin/config/giftcard-core/rapyd-settings` | Rapyd API credentials (provided by `giftcard_rapyd`) |
 
 ## Maintainers
 
