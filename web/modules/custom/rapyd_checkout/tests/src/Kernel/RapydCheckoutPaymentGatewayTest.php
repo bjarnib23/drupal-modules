@@ -5,7 +5,6 @@ namespace Drupal\Tests\rapyd_checkout\Kernel;
 use Drupal\Tests\commerce_order\Kernel\OrderKernelTestBase;
 use Drupal\commerce_order\Entity\Order;
 use Drupal\commerce_order\Entity\OrderItem;
-use Drupal\commerce_payment\Entity\Payment;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_price\Price;
 use Drupal\key\Entity\Key;
@@ -67,29 +66,29 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $this->installConfig('commerce_payment');
 
     Key::create([
-      'id'                   => 'test_access',
-      'label'                => 'Test Rapyd access key',
-      'key_provider'         => 'config',
+      'id' => 'test_access',
+      'label' => 'Test Rapyd access key',
+      'key_provider' => 'config',
       'key_provider_settings' => ['key_value' => self::ACCESS],
     ])->save();
 
     Key::create([
-      'id'                   => 'test_secret',
-      'label'                => 'Test Rapyd secret key',
-      'key_provider'         => 'config',
+      'id' => 'test_secret',
+      'label' => 'Test Rapyd secret key',
+      'key_provider' => 'config',
       'key_provider_settings' => ['key_value' => self::SECRET],
     ])->save();
 
     PaymentGateway::create([
-      'id'            => 'rapyd',
-      'label'         => 'Rapyd',
-      'plugin'        => 'rapyd_checkout',
-      'mode'          => 'test',
+      'id' => 'rapyd',
+      'label' => 'Rapyd',
+      'plugin' => 'rapyd_checkout',
+      'mode' => 'test',
       'configuration' => [
         'access_key_id' => 'test_access',
         'secret_key_id' => 'test_secret',
-        'currency'      => 'USD',
-        'country'       => 'US',
+        'currency' => 'USD',
+        'country' => 'US',
       ],
     ])->save();
   }
@@ -99,18 +98,18 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
    */
   private function createTestOrder(): Order {
     $order_item = OrderItem::create([
-      'type'       => 'test',
-      'quantity'   => 1,
+      'type' => 'test',
+      'quantity' => 1,
       'unit_price' => new Price('100', 'USD'),
     ]);
     $order_item->save();
 
     $order = Order::create([
-      'type'            => 'default',
-      'store_id'        => $this->store->id(),
-      'order_items'     => [$order_item],
+      'type' => 'default',
+      'store_id' => $this->store->id(),
+      'order_items' => [$order_item],
       'payment_gateway' => 'rapyd',
-      'mail'            => 'customer@example.com',
+      'mail' => 'customer@example.com',
     ]);
     $order->save();
     return $order;
@@ -146,8 +145,14 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
    * @return string
    *   Base64-encoded HMAC-SHA256 signature.
    */
-  private function sign(string $body, string $salt, string $timestamp, string $path): string {
-    $to_sign = 'post' . $path . $salt . $timestamp . self::ACCESS . self::SECRET . $body;
+  private function sign(
+    string $body,
+    string $salt,
+    string $timestamp,
+    string $path,
+  ): string {
+    $to_sign = 'post' . $path . $salt . $timestamp
+      . self::ACCESS . self::SECRET . $body;
     return base64_encode(hash_hmac('sha256', $to_sign, self::SECRET));
   }
 
@@ -162,7 +167,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $plugin = $this->loadPlugin([
       new Response(200, [], json_encode([
         'data' => [
-          'status'  => 'DON',
+          'status' => 'DON',
           'payment' => ['id' => 'pay_test_001', 'status' => 'CLO'],
         ],
       ])),
@@ -181,11 +186,15 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $this->assertEquals('pay_test_001', $payment->getRemoteId());
 
     $order = $this->reloadEntity($order);
-    $this->assertEquals('completed', $order->getState()->getId(), 'Order was placed after successful return.');
+    $this->assertEquals(
+      'completed',
+      $order->getState()->getId(),
+      'Order was placed after successful return.'
+    );
   }
 
   /**
-   * Tests that onReturn() is idempotent — a second call does not create a duplicate payment.
+   * Tests that onReturn() is idempotent — a second call creates no duplicate.
    */
   public function testOnReturnIsIdempotent(): void {
     $order = $this->createTestOrder();
@@ -194,7 +203,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
 
     $checkout_data = json_encode([
       'data' => [
-        'status'  => 'DON',
+        'status' => 'DON',
         'payment' => ['id' => 'pay_test_idem', 'status' => 'CLO'],
       ],
     ]);
@@ -213,21 +222,30 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       ->getStorage('commerce_payment');
     $payments = $payment_storage->loadByProperties(['order_id' => $order->id()]);
 
-    $this->assertCount(1, $payments, 'Duplicate onReturn() calls do not create a second payment.');
+    $this->assertCount(
+      1,
+      $payments,
+      'Duplicate onReturn() calls do not create a second payment.'
+    );
   }
 
   /**
-   * Tests that onNotify() creates a payment and places the order on valid webhook.
+   * Tests that onReturn() after onNotify() does not throw or double-place.
+   *
+   * Validates the §1.4 order-state guard: when the webhook arrives first and
+   * places the order, a subsequent onReturn() must not call applyTransitionById
+   * on an already-completed order.
    */
-  public function testOnNotifyCreatesPaymentAndPlacesOrder(): void {
+  public function testOnReturnAfterOnNotifyDoesNotThrow(): void {
     $order = $this->createTestOrder();
 
-    $salt      = 'testsalt00000001';
-    $timestamp = '1700000000';
-    $body      = json_encode([
+    // Send a webhook that places the order first.
+    $salt = 'salt_state_guard_01';
+    $timestamp = (string) time();
+    $body = json_encode([
       'type' => 'PAYMENT_COMPLETED',
       'data' => [
-        'id'                    => 'pay_notify_001',
+        'id' => 'pay_state_guard',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
@@ -238,7 +256,60 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $request->headers->set('rapyd-timestamp', $timestamp);
     $request->headers->set('rapyd-signature', $signature);
 
-    $plugin   = $this->loadPlugin();
+    $plugin = $this->loadPlugin();
+    $plugin->onNotify($request);
+
+    $order = $this->reloadEntity($order);
+    $this->assertEquals('completed', $order->getState()->getId());
+
+    // Now simulate onReturn() arriving after the webhook placed the order.
+    $order->setData('rapyd_checkout_id', 'checkout_state_guard');
+    $order->save();
+
+    $plugin = $this->loadPlugin([
+      new Response(200, [], json_encode([
+        'data' => [
+          'status' => 'DON',
+          'payment' => ['id' => 'pay_state_guard', 'status' => 'CLO'],
+        ],
+      ])),
+    ]);
+
+    $return_request = Request::create(
+      '/checkout/' . $order->id() . '/payment/return'
+    );
+    // Must not throw even though the order is already completed.
+    $plugin->onReturn($order, $return_request);
+
+    $payment_storage = $this->container->get('entity_type.manager')
+      ->getStorage('commerce_payment');
+    $payments = $payment_storage->loadByProperties(['order_id' => $order->id()]);
+    $this->assertCount(1, $payments, 'Only one payment created across webhook + return.');
+  }
+
+  /**
+   * Tests that onNotify() creates a payment and places the order on valid webhook.
+   */
+  public function testOnNotifyCreatesPaymentAndPlacesOrder(): void {
+    $order = $this->createTestOrder();
+
+    $salt = 'testsalt00000001';
+    $timestamp = (string) time();
+    $body = json_encode([
+      'type' => 'PAYMENT_COMPLETED',
+      'data' => [
+        'id' => 'pay_notify_001',
+        'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+      ],
+    ]);
+    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+
+    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request->headers->set('rapyd-idempotency', $salt);
+    $request->headers->set('rapyd-timestamp', $timestamp);
+    $request->headers->set('rapyd-signature', $signature);
+
+    $plugin = $this->loadPlugin();
     $response = $plugin->onNotify($request);
 
     $this->assertEquals(200, $response->getStatusCode());
@@ -253,11 +324,15 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $this->assertEquals('pay_notify_001', $payment->getRemoteId());
 
     $order = $this->reloadEntity($order);
-    $this->assertEquals('completed', $order->getState()->getId(), 'Order was placed after webhook.');
+    $this->assertEquals(
+      'completed',
+      $order->getState()->getId(),
+      'Order was placed after webhook.'
+    );
   }
 
   /**
-   * Tests that onNotify() returns 401 and creates no payment on invalid signature.
+   * Tests that onNotify() returns 401 and creates no payment on bad signature.
    */
   public function testOnNotifyRejectsBadSignature(): void {
     $order = $this->createTestOrder();
@@ -265,17 +340,17 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $body = json_encode([
       'type' => 'PAYMENT_COMPLETED',
       'data' => [
-        'id'                    => 'pay_bad_sig',
+        'id' => 'pay_bad_sig',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
 
     $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
     $request->headers->set('rapyd-idempotency', 'salt');
-    $request->headers->set('rapyd-timestamp', '1700000000');
+    $request->headers->set('rapyd-timestamp', (string) time());
     $request->headers->set('rapyd-signature', 'completely_wrong_signature');
 
-    $plugin   = $this->loadPlugin();
+    $plugin = $this->loadPlugin();
     $response = $plugin->onNotify($request);
 
     $this->assertEquals(401, $response->getStatusCode());
@@ -287,17 +362,55 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
   }
 
   /**
-   * Tests that onNotify() is idempotent — duplicate webhooks do not create duplicate payments.
+   * Tests that onNotify() discards webhooks with a stale timestamp.
+   *
+   * Validates §1.5 timestamp-skew protection: a correctly signed but
+   * replayed (old) request must be accepted with 200 and no side effects.
+   */
+  public function testOnNotifyRejectsStaleTimestamp(): void {
+    $order = $this->createTestOrder();
+
+    // Use a timestamp 10 minutes in the past.
+    $timestamp = (string) (time() - 600);
+    $salt = 'salt_stale_ts_001';
+    $body = json_encode([
+      'type' => 'PAYMENT_COMPLETED',
+      'data' => [
+        'id' => 'pay_stale',
+        'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+      ],
+    ]);
+    $signature = $this->sign($body, $salt, $timestamp, self::NOTIFY_PATH);
+
+    $request = Request::create(self::NOTIFY_PATH, 'POST', [], [], [], [], $body);
+    $request->headers->set('rapyd-idempotency', $salt);
+    $request->headers->set('rapyd-timestamp', $timestamp);
+    $request->headers->set('rapyd-signature', $signature);
+
+    $plugin = $this->loadPlugin();
+    $response = $plugin->onNotify($request);
+
+    // Returns 200 so Rapyd does not retry endlessly.
+    $this->assertEquals(200, $response->getStatusCode());
+
+    $payment_storage = $this->container->get('entity_type.manager')
+      ->getStorage('commerce_payment');
+    $payments = $payment_storage->loadByProperties(['order_id' => $order->id()]);
+    $this->assertCount(0, $payments, 'No payment created for stale timestamp.');
+  }
+
+  /**
+   * Tests that onNotify() is idempotent — duplicate webhooks create no duplicate.
    */
   public function testOnNotifyIsIdempotent(): void {
     $order = $this->createTestOrder();
 
-    $salt      = 'testsalt00000002';
-    $timestamp = '1700000001';
-    $body      = json_encode([
+    $salt = 'testsalt00000002';
+    $timestamp = (string) time();
+    $body = json_encode([
       'type' => 'PAYMENT_COMPLETED',
       'data' => [
-        'id'                    => 'pay_notify_idem',
+        'id' => 'pay_notify_idem',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
       ],
     ]);
@@ -315,7 +428,11 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
     $payment_storage = $this->container->get('entity_type.manager')
       ->getStorage('commerce_payment');
     $payments = $payment_storage->loadByProperties(['order_id' => $order->id()]);
-    $this->assertCount(1, $payments, 'Duplicate webhooks do not create duplicate payments.');
+    $this->assertCount(
+      1,
+      $payments,
+      'Duplicate webhooks do not create duplicate payments.'
+    );
   }
 
 }
