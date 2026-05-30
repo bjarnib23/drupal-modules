@@ -5,8 +5,6 @@
  * Install, update and uninstall functions for the Gift Card Core module.
  */
 
-use Drupal\Core\Database\Database;
-
 /**
  * Implements hook_uninstall().
  */
@@ -41,16 +39,19 @@ function giftcard_core_requirements(string $phase): array {
  * Rename the rapyd_payment_id field to payment_id on the gift_card table.
  */
 function giftcard_core_update_8001(): void {
-  $schema = Database::getConnection()->schema();
-  $table  = 'gift_card';
+  $database = \Drupal::database();
+  $schema   = $database->schema();
 
-  if ($schema->fieldExists($table, 'rapyd_payment_id') && !$schema->fieldExists($table, 'payment_id')) {
-    $schema->changeField($table, 'rapyd_payment_id', 'payment_id', [
-      'type'   => 'varchar',
-      'length' => 255,
+  if ($schema->fieldExists('gift_card', 'rapyd_payment_id') && !$schema->fieldExists('gift_card', 'payment_id')) {
+    $schema->addField('gift_card', 'payment_id', [
+      'type'     => 'varchar',
+      'length'   => 255,
       'not null' => FALSE,
-      'default' => '',
+      'default'  => '',
     ]);
+    $database->update('gift_card')
+      ->expression('payment_id', 'rapyd_payment_id')
+      ->execute();
   }
 
   \Drupal::entityDefinitionUpdateManager()->applyUpdates();
