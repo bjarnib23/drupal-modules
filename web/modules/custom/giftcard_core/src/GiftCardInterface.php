@@ -101,10 +101,13 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
   public function setSenderEmail(string $email): static;
 
   /**
-   * Gets the gift card amount in the smallest currency unit.
+   * Gets the gift card amount in the major currency unit (e.g. 5000 ISK).
+   *
+   * Amounts are stored and sent to the payment provider as whole units,
+   * not in the smallest currency unit (not cents).
    *
    * @return int
-   *   The amount.
+   *   The amount in the major currency unit.
    */
   public function getAmount(): int;
 
@@ -112,7 +115,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    * Sets the gift card amount.
    *
    * @param int $amount
-   *   The amount in the smallest currency unit.
+   *   The amount in the major currency unit.
    *
    * @return static
    */
@@ -178,7 +181,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    * @return string
    *   The payment ID.
    */
-  public function getRapydPaymentId(): string;
+  public function getPaymentId(): string;
 
   /**
    * Sets the payment provider's payment ID.
@@ -188,7 +191,7 @@ interface GiftCardInterface extends ContentEntityInterface, EntityChangedInterfa
    *
    * @return static
    */
-  public function setRapydPaymentId(string $paymentId): static;
+  public function setPaymentId(string $paymentId): static;
 
   /**
    * Gets the Unix timestamp when the gift card was created.

@@ -9,10 +9,4 @@ services:
       - '@keyvalue.expirable'
 
   giftcard_core.payment_client:
-    class: Drupal\giftcard_core\RapydClient
-    arguments:
-      - '@http_client'
-      - '@key.repository'
-      - '@config.factory'
-      - '@logger.factory'
-      - '@language_manager'
+    class: Drupal\giftcard_core\NullPaymentClient

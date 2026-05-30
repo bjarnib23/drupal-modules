@@ -14,13 +14,22 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class GiftCardEntityTest extends EntityKernelTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = ['giftcard_core', 'key', 'options'];
 
+  /**
+   * {@inheritdoc}
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('gift_card');
   }
 
+  /**
+   * Tests that a GiftCard can be created, saved, and loaded.
+   */
   public function testGiftCardCanBeCreatedAndLoaded(): void {
     $giftCard = GiftCard::create([
       'code'            => 'TESTCODE12345678',
@@ -46,6 +55,9 @@ class GiftCardEntityTest extends EntityKernelTestBase {
     $this->assertSame('active', $loaded->getStatus());
   }
 
+  /**
+   * Tests that a GiftCard without a code fails validation.
+   */
   public function testGiftCardRequiresCode(): void {
     $giftCard = GiftCard::create([
       'recipient_name'  => 'Anna Sigurðardóttir',
@@ -61,6 +73,9 @@ class GiftCardEntityTest extends EntityKernelTestBase {
     $this->assertGreaterThan(0, $violations->count());
   }
 
+  /**
+   * Tests that sender fields and message are persisted correctly.
+   */
   public function testGiftCardSenderAndMessageArePersisted(): void {
     $giftCard = GiftCard::create([
       'code'            => 'SENDERTEST123456',
@@ -81,6 +96,9 @@ class GiftCardEntityTest extends EntityKernelTestBase {
     $this->assertSame('Til hamingju með afmælið!', $loaded->getMessage());
   }
 
+  /**
+   * Tests that the gift card status can be updated.
+   */
   public function testGiftCardStatusCanBeUpdated(): void {
     $giftCard = GiftCard::create([
       'code'            => 'STATUSTEST123456',

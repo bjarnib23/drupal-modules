@@ -48,7 +48,7 @@ class GiftCardCheckoutForm extends FormBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('giftcard_core.gift_card_service'),
       $container->get('giftcard_core.payment_client'),
       $container->get('flood'),
@@ -162,7 +162,6 @@ class GiftCardCheckoutForm extends FormBase {
 
     $config   = $this->configFactory()->get('giftcard_core.settings');
     $currency = $config->get('currency');
-    $country  = $config->get('rapyd_country');
 
     $checkoutData = [
       'sender_name'     => $form_state->getValue('sender_name'),
@@ -180,18 +179,17 @@ class GiftCardCheckoutForm extends FormBase {
     $session = $this->paymentClient->createCheckout(
       $checkoutData['amount'],
       $checkoutData['currency'],
-      $country,
       $completeUrl,
       $cancelUrl,
     );
 
     if ($session === NULL) {
-      $this->logger('giftcard_core')->error('Failed to create payment checkout session.');
+      $this->getLogger('giftcard_core')->error('Failed to create payment checkout session.');
       $this->messenger()->addError($this->t('The payment gateway is unavailable. Please try again later.'));
       return;
     }
 
-    $checkoutData['rapyd_payment_id'] = $session['payment_id'];
+    $checkoutData['payment_id'] = $session['payment_id'];
 
     $this->giftCardService->storeCheckoutData($checkoutData);
     $this->giftCardService->storeCheckoutDataByPaymentId($session['payment_id'], $checkoutData);

@@ -123,15 +123,15 @@ class GiftCardService {
    *   The saved entity, or NULL on failure.
    */
   public function createGiftCard(array $data): ?GiftCardInterface {
-    if (!empty($data['rapyd_payment_id'])) {
+    if (!empty($data['payment_id'])) {
       $existing = $this->entityTypeManager
         ->getStorage('gift_card')
-        ->loadByProperties(['rapyd_payment_id' => $data['rapyd_payment_id']]);
+        ->loadByProperties(['payment_id' => $data['payment_id']]);
 
       if (!empty($existing)) {
         $this->loggerFactory->get('giftcard_core')->warning(
           'Duplicate gift card creation prevented for payment @id.',
-          ['@id' => $data['rapyd_payment_id']]
+          ['@id' => $data['payment_id']]
         );
         return reset($existing);
       }
@@ -149,7 +149,7 @@ class GiftCardService {
         'currency'         => $data['currency'] ?? '',
         'message'          => $data['message'] ?? '',
         'status'           => 'active',
-        'rapyd_payment_id' => $data['rapyd_payment_id'] ?? '',
+        'payment_id' => $data['payment_id'] ?? '',
       ]);
 
       $giftCard->save();
@@ -189,8 +189,8 @@ class GiftCardService {
    */
   public function generateCode(): string {
     do {
-      $raw  = strtoupper(str_replace(['+', '/', '='], '', base64_encode(random_bytes(16))));
-      $code = substr($raw, 0, 16);
+      $raw    = strtoupper(str_replace(['+', '/', '='], '', base64_encode(random_bytes(16))));
+      $code   = substr($raw, 0, 16);
       $exists = $this->entityTypeManager
         ->getStorage('gift_card')
         ->loadByProperties(['code' => $code]);

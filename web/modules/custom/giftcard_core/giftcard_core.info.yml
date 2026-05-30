@@ -6,4 +6,3 @@ package: Gift Cards
 configure: giftcard_core.settings
 dependencies:
   - drupal:user
-  - key:key

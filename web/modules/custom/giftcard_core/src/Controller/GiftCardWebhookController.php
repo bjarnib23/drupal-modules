@@ -35,7 +35,7 @@ class GiftCardWebhookController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('giftcard_core.gift_card_service'),
       $container->get('giftcard_core.payment_client'),
       $container->get('plugin.manager.mail'),
@@ -52,33 +52,19 @@ class GiftCardWebhookController extends ControllerBase {
    *   An HTTP response.
    */
   public function receive(Request $request): Response {
-    $body      = $request->getContent();
-    $salt      = $request->headers->get('rapyd-idempotency', '');
-    $timestamp = $request->headers->get('rapyd-timestamp', '');
-    $signature = $request->headers->get('rapyd-signature', '');
-    $path      = $request->getPathInfo();
-
-    if (!$this->paymentClient->verifyWebhookSignature($body, $salt, $timestamp, $signature, $path)) {
-      $this->logger('giftcard_core')->warning('Received webhook with invalid signature.');
+    if (!$this->paymentClient->verifyWebhook($request)) {
+      $this->getLogger('giftcard_core')->warning('Received webhook with invalid or replayed signature.');
       return new Response('Forbidden', Response::HTTP_FORBIDDEN);
     }
 
-    $payload = json_decode($body, TRUE);
-    $type    = $payload['type'] ?? '';
-
-    if ($type !== 'PAYMENT_COMPLETED') {
-      return new Response('OK', Response::HTTP_OK);
-    }
-
-    $paymentId = $payload['data']['id'] ?? NULL;
+    $paymentId = $this->paymentClient->extractCompletedPaymentId($request);
     if ($paymentId === NULL) {
-      $this->logger('giftcard_core')->error('Webhook PAYMENT_COMPLETED missing payment ID.');
-      return new Response('Bad Request', Response::HTTP_BAD_REQUEST);
+      return new Response('OK', Response::HTTP_OK);
     }
 
     $checkoutData = $this->giftCardService->getCheckoutDataByPaymentId($paymentId);
     if ($checkoutData === NULL) {
-      $this->logger('giftcard_core')->warning(
+      $this->getLogger('giftcard_core')->warning(
         'No checkout data found for payment @id.',
         ['@id' => $paymentId]
       );

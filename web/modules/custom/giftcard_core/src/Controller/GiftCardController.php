@@ -25,7 +25,7 @@ class GiftCardController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static(
+    return new self(
       $container->get('giftcard_core.gift_card_service'),
     );
   }
@@ -50,11 +50,13 @@ class GiftCardController extends ControllerBase {
             '@email'     => $data['recipient_email'],
           ]
         ),
+        '#cache'  => ['contexts' => ['session']],
       ];
     }
 
     return [
       '#markup' => $this->t('Thank you! Your gift card purchase is complete.'),
+      '#cache'  => ['contexts' => ['session']],
     ];
   }
 
@@ -69,6 +71,7 @@ class GiftCardController extends ControllerBase {
 
     return [
       '#markup' => $this->t('Your purchase was cancelled. No payment has been taken.'),
+      '#cache'  => ['contexts' => ['session']],
     ];
   }
 

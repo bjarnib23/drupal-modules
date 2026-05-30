@@ -23,9 +23,6 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('giftcard_core')]
 class GiftCardServiceTest extends UnitTestCase {
 
-  /**
-   * Builds a GiftCardService with mocked dependencies.
-   */
   private function makeService(EntityStorageInterface $storage): GiftCardService {
     $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
     $entityTypeManager->method('getStorage')->with('gift_card')->willReturn($storage);
@@ -43,9 +40,6 @@ class GiftCardServiceTest extends UnitTestCase {
     );
   }
 
-  /**
-   * Tests that generateCode returns a 16-character string.
-   */
   public function testGenerateCodeReturnsSixteenCharacters(): void {
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('loadByProperties')->willReturn([]);
@@ -53,9 +47,6 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertSame(16, strlen($code));
   }
 
-  /**
-   * Tests that generateCode returns an uppercase alphanumeric string.
-   */
   public function testGenerateCodeIsUppercaseAlphanumeric(): void {
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('loadByProperties')->willReturn([]);
@@ -63,9 +54,6 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertMatchesRegularExpression('/^[A-Z0-9]{16}$/', $code);
   }
 
-  /**
-   * Tests that generateCode produces unique values across multiple calls.
-   */
   public function testGenerateCodeReturnsDifferentValuesEachCall(): void {
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('loadByProperties')->willReturn([]);
@@ -74,9 +62,6 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertGreaterThan(1, count(array_unique($codes)));
   }
 
-  /**
-   * Tests that createGiftCard creates and saves a new gift card entity.
-   */
   public function testCreateGiftCardCreatesAndSavesEntity(): void {
     $card = $this->createMock(GiftCardInterface::class);
     $card->expects($this->once())->method('save');
@@ -86,7 +71,7 @@ class GiftCardServiceTest extends UnitTestCase {
     $storage->method('create')->willReturn($card);
 
     $result = $this->makeService($storage)->createGiftCard([
-      'rapyd_payment_id' => 'pay_new',
+      'payment_id' => 'pay_new',
       'code'             => 'TESTCODE1234567',
       'recipient_name'   => 'Bob',
       'recipient_email'  => 'bob@example.com',
@@ -99,20 +84,17 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertSame($card, $result);
   }
 
-  /**
-   * Tests that createGiftCard returns existing entity on duplicate payment ID.
-   */
   public function testCreateGiftCardPreventsDuplicates(): void {
     $existing = $this->createMock(GiftCardInterface::class);
 
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('loadByProperties')
-      ->with(['rapyd_payment_id' => 'pay_dup'])
+      ->with(['payment_id' => 'pay_dup'])
       ->willReturn([$existing]);
     $storage->expects($this->never())->method('create');
 
     $result = $this->makeService($storage)->createGiftCard([
-      'rapyd_payment_id' => 'pay_dup',
+      'payment_id' => 'pay_dup',
       'amount'           => 5000,
       'currency'         => 'ISK',
     ]);
@@ -120,9 +102,6 @@ class GiftCardServiceTest extends UnitTestCase {
     $this->assertSame($existing, $result);
   }
 
-  /**
-   * Tests that checkout data can be stored and retrieved from the temp store.
-   */
   public function testStoreAndRetrieveCheckoutData(): void {
     $data  = ['sender_name' => 'Jón', 'amount' => 5000];
     $store = $this->createMock(PrivateTempStore::class);

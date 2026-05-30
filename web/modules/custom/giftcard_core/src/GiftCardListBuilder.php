@@ -31,7 +31,8 @@ class GiftCardListBuilder extends EntityListBuilder {
     $row['recipient_name'] = $entity->getRecipientName();
     $row['sender_name']    = $entity->getSenderName();
     $row['amount']         = $entity->getAmount() . ' ' . $entity->getCurrency();
-    $row['status']         = $entity->getStatus();
+    $allowed = $entity->get('status')->getFieldDefinition()->getSetting('allowed_values');
+    $row['status'] = $allowed[$entity->getStatus()] ?? $entity->getStatus();
     return $row + parent::buildRow($entity);
   }
 
