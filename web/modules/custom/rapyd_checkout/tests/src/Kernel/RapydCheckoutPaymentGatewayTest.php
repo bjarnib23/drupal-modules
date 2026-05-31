@@ -7,6 +7,7 @@ use Drupal\commerce_order\Entity\Order;
 use Drupal\commerce_order\Entity\OrderItem;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_price\Price;
+use Drupal\commerce_payment\Entity\Payment;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Url;
 use Drupal\key\Entity\Key;
@@ -259,6 +260,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       'data' => [
         'id' => 'pay_state_guard',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+        'amount' => 10000,
       ],
     ]);
     $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
@@ -312,6 +314,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       'data' => [
         'id' => 'pay_notify_001',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+        'amount' => 10000,
       ],
     ]);
     $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
@@ -424,6 +427,7 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       'data' => [
         'id' => 'pay_notify_idem',
         'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+        'amount' => 10000,
       ],
     ]);
     $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
@@ -445,6 +449,105 @@ class RapydCheckoutPaymentGatewayTest extends OrderKernelTestBase {
       $payments,
       'Duplicate webhooks do not create duplicate payments.'
     );
+  }
+
+  /**
+   * Tests that onNotify() discards a webhook whose amount doesn't match.
+   *
+   * Validates the amount-verification parity with onReturn(): a valid signature
+   * and order reference but a mismatched amount must create no payment.
+   */
+  public function testOnNotifyRejectsAmountMismatch(): void {
+    $order = $this->createTestOrder();
+
+    $salt = 'salt_amount_mismatch';
+    $timestamp = (string) time();
+    // Order total is $100.00 = 10000 minor units; send 9999 (1 cent short).
+    $body = json_encode([
+      'type' => 'PAYMENT_COMPLETED',
+      'data' => [
+        'id' => 'pay_mismatch',
+        'merchant_reference_id' => 'rapyd-order-' . $order->id(),
+        'amount' => 9999,
+      ],
+    ]);
+    $signature = $this->sign($body, $salt, $timestamp, $this->notifyPath());
+
+    $request = Request::create($this->notifyPath(), 'POST', [], [], [], [], $body);
+    $request->headers->set('rapyd-idempotency', $salt);
+    $request->headers->set('rapyd-timestamp', $timestamp);
+    $request->headers->set('rapyd-signature', $signature);
+
+    $plugin = $this->loadPlugin();
+    $response = $plugin->onNotify($request);
+
+    $this->assertEquals(200, $response->getStatusCode());
+    $payments = $this->container->get('entity_type.manager')
+      ->getStorage('commerce_payment')
+      ->loadByProperties(['order_id' => $order->id()]);
+    $this->assertCount(0, $payments, 'No payment created when amount does not match order total.');
+  }
+
+  /**
+   * Tests that refundPayment() marks a completed payment as refunded.
+   */
+  public function testRefundPaymentFullRefund(): void {
+    $order = $this->createTestOrder();
+
+    // Create a completed payment to refund.
+    $payment = Payment::create([
+      'type' => 'payment_default',
+      'payment_gateway' => 'rapyd',
+      'order_id' => $order->id(),
+      'amount' => new Price('100', 'USD'),
+      'state' => 'completed',
+      'remote_id' => 'pay_to_refund_001',
+    ]);
+    $payment->save();
+
+    // Mock Rapyd's refund endpoint returning success.
+    $plugin = $this->loadPlugin([
+      new Response(200, [], json_encode([
+        'status' => ['status' => 'SUCCESS'],
+        'data' => ['id' => 'ref_001'],
+      ])),
+    ]);
+
+    $plugin->refundPayment($payment);
+
+    $payment = $this->reloadEntity($payment);
+    $this->assertEquals('refunded', $payment->getState()->getId());
+    $this->assertEquals('100', $payment->getRefundedAmount()->getNumber());
+  }
+
+  /**
+   * Tests that refundPayment() sets partial_refunded state on a partial refund.
+   */
+  public function testRefundPaymentPartialRefund(): void {
+    $order = $this->createTestOrder();
+
+    $payment = Payment::create([
+      'type' => 'payment_default',
+      'payment_gateway' => 'rapyd',
+      'order_id' => $order->id(),
+      'amount' => new Price('100', 'USD'),
+      'state' => 'completed',
+      'remote_id' => 'pay_to_refund_002',
+    ]);
+    $payment->save();
+
+    $plugin = $this->loadPlugin([
+      new Response(200, [], json_encode([
+        'status' => ['status' => 'SUCCESS'],
+        'data' => ['id' => 'ref_002'],
+      ])),
+    ]);
+
+    $plugin->refundPayment($payment, new Price('40', 'USD'));
+
+    $payment = $this->reloadEntity($payment);
+    $this->assertEquals('partially_refunded', $payment->getState()->getId());
+    $this->assertEquals('40', $payment->getRefundedAmount()->getNumber());
   }
 
   /**
