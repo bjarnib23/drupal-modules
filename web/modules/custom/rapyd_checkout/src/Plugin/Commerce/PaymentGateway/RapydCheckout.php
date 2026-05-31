@@ -350,6 +350,11 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
     }
 
     $payload = json_decode($raw_body, TRUE);
+    if (!is_array($payload)) {
+      $this->logger->warning('Rapyd webhook: invalid JSON body.');
+      return new Response('', 200);
+    }
+
     if (($payload['type'] ?? '') !== 'PAYMENT_COMPLETED') {
       return new Response('', 200);
     }
@@ -381,6 +386,20 @@ class RapydCheckout extends OffsitePaymentGatewayBase implements
       ->getStorage('commerce_payment')
       ->loadByProperties(['order_id' => $order_id, 'remote_id' => $remote_id]);
     if ($existing || $order->getState()->getId() === 'completed') {
+      return new Response('', 200);
+    }
+
+    $rapyd_amount = (int) ($payload['data']['amount'] ?? 0);
+    $expected_amount = $this->toMinorUnits($order->getTotalPrice());
+    if ($rapyd_amount !== $expected_amount) {
+      $this->logger->error(
+        'Rapyd webhook: amount mismatch for order @id (Rapyd: @rapyd, expected: @expected).',
+        [
+          '@id'       => $order_id,
+          '@rapyd'    => $rapyd_amount,
+          '@expected' => $expected_amount,
+        ]
+      );
       return new Response('', 200);
     }
 
