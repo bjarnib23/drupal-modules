@@ -115,7 +115,7 @@ class BookingForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config   = $this->configFactory()->get('booking_core.settings');
-    $services = $config->get('services');
+    $services = $config->get('services') ?: [];
     $options  = array_combine($services, $services);
 
     $site_tz  = $this->configFactory()->get('system.date')->get('timezone.default') ?: 'UTC';
@@ -139,6 +139,16 @@ class BookingForm extends FormBase {
       '#title'     => $this->t('Phone number'),
       '#maxlength' => 50,
     ];
+
+    if (empty($services)) {
+      $form['service_notice'] = [
+        '#type'   => 'markup',
+        '#markup' => $this->t('No services are configured yet. Please ask an administrator to add services in the <a href=":url">booking settings</a>.', [
+          ':url' => '/admin/config/booking-core/settings',
+        ]),
+      ];
+      return $form;
+    }
 
     $form['service'] = [
       '#type'         => 'select',
