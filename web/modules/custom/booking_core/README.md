@@ -56,7 +56,7 @@ Available at `/book-appointment`. Customers:
 
 ### Admin interface
 
-Requires the **Administer bookings** permission.
+Requires the **Administer booking** or **Manage booking** permission.
 
 | Path | Description |
 |---|---|
@@ -79,7 +79,8 @@ Dates are formatted using the site's configured timezone.
 
 | Permission | Description |
 |---|---|
-| `administer bookings` | Access admin booking list, view, delete pages, and settings form |
+| `administer booking` | Configure booking settings and fully manage all bookings |
+| `manage booking` | View the booking calendar and list, and delete individual bookings |
 
 ## Running tests
 
