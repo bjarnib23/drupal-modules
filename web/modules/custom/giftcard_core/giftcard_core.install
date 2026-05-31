@@ -52,6 +52,8 @@ function giftcard_core_update_8001(): void {
     $database->update('gift_card')
       ->expression('payment_id', 'rapyd_payment_id')
       ->execute();
+
+    $schema->dropField('gift_card', 'rapyd_payment_id');
   }
 
   \Drupal::entityDefinitionUpdateManager()->applyUpdates();
