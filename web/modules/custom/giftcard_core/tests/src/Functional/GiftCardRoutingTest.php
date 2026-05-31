@@ -3,14 +3,12 @@
 namespace Drupal\Tests\giftcard_core\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests route access control and HTTP method restrictions.
+ *
+ * @group giftcard_core
  */
-#[RunTestsInSeparateProcesses]
-#[Group('giftcard_core')]
 class GiftCardRoutingTest extends BrowserTestBase {
 
   /**

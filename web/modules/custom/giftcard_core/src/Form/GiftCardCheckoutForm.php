@@ -22,6 +22,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class GiftCardCheckoutForm extends FormBase {
 
   private const FLOOD_EVENT = 'giftcard_core_checkout';
+  private const MAX_AMOUNT  = 1_000_000;
 
   /**
    * Constructs a new GiftCardCheckoutForm.
@@ -144,10 +145,25 @@ class GiftCardCheckoutForm extends FormBase {
       return;
     }
 
+    /** @var \Drupal\Component\Utility\EmailValidatorInterface $emailValidator */
+    $emailValidator = \Drupal::service('email.validator');
+    if (!$emailValidator->isValid($form_state->getValue('sender_email'))) {
+      $form_state->setErrorByName('sender_email', $this->t('Please enter a valid sender email address.'));
+    }
+    if (!$emailValidator->isValid($form_state->getValue('recipient_email'))) {
+      $form_state->setErrorByName('recipient_email', $this->t('Please enter a valid recipient email address.'));
+    }
+
     $amount = (int) $form_state->getValue('amount');
     if ($amount < $minAmount) {
       $form_state->setErrorByName('amount', $this->t('The minimum gift card amount is @min @currency.', [
         '@min'      => $minAmount,
+        '@currency' => $currency,
+      ]));
+    }
+    if ($amount > self::MAX_AMOUNT) {
+      $form_state->setErrorByName('amount', $this->t('The maximum gift card amount is @max @currency.', [
+        '@max'      => self::MAX_AMOUNT,
         '@currency' => $currency,
       ]));
     }

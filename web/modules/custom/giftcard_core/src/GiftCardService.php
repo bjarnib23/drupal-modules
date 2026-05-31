@@ -137,31 +137,42 @@ class GiftCardService {
       }
     }
 
-    try {
-      /** @var \Drupal\giftcard_core\GiftCardInterface $giftCard */
-      $giftCard = $this->entityTypeManager->getStorage('gift_card')->create([
-        'code'             => $data['code'] ?? $this->generateCode(),
-        'recipient_name'   => $data['recipient_name'] ?? '',
-        'recipient_email'  => $data['recipient_email'] ?? '',
-        'sender_name'      => $data['sender_name'] ?? '',
-        'sender_email'     => $data['sender_email'] ?? '',
-        'amount'           => (int) ($data['amount'] ?? 0),
-        'currency'         => $data['currency'] ?? '',
-        'message'          => $data['message'] ?? '',
-        'status'           => 'active',
-        'payment_id' => $data['payment_id'] ?? '',
-      ]);
+    // Retry up to three times to handle the rare TOCTOU race where two
+    // concurrent requests generate the same code before either saves.
+    $lastException = NULL;
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+      try {
+        /** @var \Drupal\giftcard_core\GiftCardInterface $giftCard */
+        $giftCard = $this->entityTypeManager->getStorage('gift_card')->create([
+          'code'            => $data['code'] ?? $this->generateCode(),
+          'recipient_name'  => $data['recipient_name'] ?? '',
+          'recipient_email' => $data['recipient_email'] ?? '',
+          'sender_name'     => $data['sender_name'] ?? '',
+          'sender_email'    => $data['sender_email'] ?? '',
+          'amount'          => (int) ($data['amount'] ?? 0),
+          'currency'        => $data['currency'] ?? '',
+          'message'         => $data['message'] ?? '',
+          'status'          => 'active',
+          'payment_id'      => $data['payment_id'] ?? '',
+        ]);
 
-      $giftCard->save();
-      return $giftCard;
+        $giftCard->save();
+        return $giftCard;
+      }
+      catch (\Exception $e) {
+        // On a code collision the DB throws a unique-constraint violation.
+        // Unset any caller-supplied code so the next attempt generates a fresh
+        // one; for other exceptions bail out immediately.
+        unset($data['code']);
+        $lastException = $e;
+      }
     }
-    catch (\Exception $e) {
-      $this->loggerFactory->get('giftcard_core')->error(
-        'Failed to create gift card: @message',
-        ['@message' => $e->getMessage()]
-      );
-      return NULL;
-    }
+
+    $this->loggerFactory->get('giftcard_core')->error(
+      'Failed to create gift card after 3 attempts: @message',
+      ['@message' => $lastException?->getMessage()]
+    );
+    return NULL;
   }
 
   /**
